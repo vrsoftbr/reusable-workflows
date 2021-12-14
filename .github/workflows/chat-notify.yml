@@ -28,7 +28,7 @@ jobs:
         echo ${{ inputs.hasError }}
         
     - name: Notify Problem
-      if: inputs.hasCommit && inputs.hasError
+      if: inputs.hasError == true
       run: |
         curl --location --request POST '${{ env.CHAT_URL_PROBLEM }}' \
         -H "Content-type: application/json; charset=utf-8" \
@@ -42,7 +42,7 @@ jobs:
         -d "{\"text\":\"*${{ inputs.appName }}:* Concluída Build e Release/Tag Criada\"}"
 
     - name: Notify Unnecessary and Deploy Release
-      if: inputs.hasCommit == false
+      if: inputs.hasCommit == false && inputs.hasError == false
       run: |
         curl --location --request POST '${{ env.CHAT_URL }}' \
         -H "Content-type: application/json; charset=utf-8" \
