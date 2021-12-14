@@ -1,0 +1,28 @@
+name: Check Commit
+
+on:
+  workflow_call:
+    secrets:
+      VRPACKAGETOKEN:
+        required: true
+
+jobs:
+  get-commit-count:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.VRPACKAGETOKEN }}
+          fetch-depth: 0
+          
+      - name: Git Config
+        run: git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com" && git config --global user.name "${GITHUB_ACTOR}" 
+      - name: Commits Since Last Tag
+      
+        id: check_changes
+        run: |
+          FIRST_TAG=$([ -z "$(git tag)" ] && echo "true" || echo "false")
+          COMMIT_COUNT=$([ "$FIRST_TAG" == true ] && echo "999" || echo "$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)")
+          echo "Commits since last tag: $COMMIT_COUNT"
+          echo ::set-output name=commit_count::$COMMIT_COUNT
