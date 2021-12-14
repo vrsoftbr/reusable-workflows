@@ -16,6 +16,7 @@ on:
 
 jobs:
   send-message:
+    name: Send Message
     runs-on: ubuntu-latest
     env:
       CHAT_URL: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=1-qRFuszkgYW7Dwdh4XKthh_fQylN6EYQjeONdp466c%3D
