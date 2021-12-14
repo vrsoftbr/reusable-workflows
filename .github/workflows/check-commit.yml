@@ -9,6 +9,9 @@ on:
       count:
         description: "The count of commits in main branch since last tag created"
         value: ${{ jobs.get-commit-count.outputs.count }}
+      exist:
+        description: "Has commits in main branch since last tag created"
+        value: ${{ jobs.get-commit-count.outputs.exist }}
 
 jobs:
   get-commit-count:
@@ -16,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       count: ${{ steps.check_changes.outputs.commit_count }}
+      exist: ${{ steps.check_changes.outputs.commit_exist }}
       status: ${{ job.status }}
     steps:
       - name: Checkout
@@ -35,3 +39,4 @@ jobs:
           COMMIT_COUNT=$([ "$FIRST_TAG" == true ] && echo "999" || echo "$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)")
           echo "Commits since last tag: $COMMIT_COUNT"
           echo ::set-output name=commit_count::$COMMIT_COUNT
+          echo ::set-output name=commit_exist::$COMMIT_COUNT > 0
