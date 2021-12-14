@@ -34,14 +34,14 @@ jobs:
         -d "{\"text\":\"*${{ inputs.appName }}:* EEEEEPA! Algo de errado não está certo! 😢 \"}"
 
     - name: Notify Release
-      if: inputs.hasCommit && !inputs.hasError
+      if: inputs.hasCommit == true && inputs.hasError == false
       run: |
         curl --location --request POST '${{ env.CHAT_URL }}' \
         -H "Content-type: application/json; charset=utf-8" \
         -d "{\"text\":\"*${{ inputs.appName }}:* Concluída Build e Release/Tag Criada\"}"
 
     - name: Notify Unnecessary and Deploy Release
-      if: needs.check-commit.outputs.count == 0 
+      if: inputs.hasCommit == false
       run: |
         curl --location --request POST '${{ env.CHAT_URL }}' \
         -H "Content-type: application/json; charset=utf-8" \
