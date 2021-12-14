@@ -31,8 +31,8 @@ jobs:
           
       - name: Git Config
         run: git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com" && git config --global user.name "${GITHUB_ACTOR}" 
-      - name: Commits Since Last Tag
       
+      - name: Commits Since Last Tag
         id: check_changes
         run: |
           FIRST_TAG=$([ -z "$(git tag)" ] && echo "true" || echo "false")
