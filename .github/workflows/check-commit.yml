@@ -12,6 +12,7 @@ on:
 
 jobs:
   get-commit-count:
+    name: Get Commit Count
     runs-on: ubuntu-latest
     outputs:
       count: ${{ steps.check_changes.outputs.commit_count }}
