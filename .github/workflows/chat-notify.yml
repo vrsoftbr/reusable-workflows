@@ -23,9 +23,9 @@ jobs:
       CHAT_URL_PROBLEM: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=mUvWltGCPr38a4sxnHrrWrIsn72x9FgpLX3aM3aIAws%3D
     steps:
     - run: |
-        echo ${{ inputs.appName }}
-        echo ${{ inputs.hasCommit }}
-        echo ${{ inputs.hasError }}
+        echo "appName:" ${{ inputs.appName }}
+        echo "hasCommit:" ${{ inputs.hasCommit }}
+        echo "hasError:" ${{ inputs.hasError }}
         
     - name: Notify Problem
       if: inputs.hasError == true
