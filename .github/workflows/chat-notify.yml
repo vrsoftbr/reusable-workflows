@@ -7,9 +7,6 @@ on:
       appName:
         required: true
         type: string
-      message:
-        required: true
-        type: string
       hasCommit:
         required: true
         type: boolean
@@ -20,10 +17,33 @@ on:
 jobs:
   send-message:
     runs-on: ubuntu-latest
+    env:
+      CHAT_URL: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=1-qRFuszkgYW7Dwdh4XKthh_fQylN6EYQjeONdp466c%3D
+      CHAT_URL_PROBLEM: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=mUvWltGCPr38a4sxnHrrWrIsn72x9FgpLX3aM3aIAws%3D
     steps:
     - run: |
         echo ${{ inputs.appName }}
-        echo ${{ inputs.message }}
         echo ${{ inputs.hasCommit }}
         echo ${{ inputs.hasError }}
+        
+    - name: Notify Problem
+      if: inputs.hasCommit && inputs.hasError
+      run: |
+        curl --location --request POST '${{ env.CHAT_URL_PROBLEM }}' \
+        -H "Content-type: application/json; charset=utf-8" \
+        -d "{\"text\":\"*${{ inputs.appName }}:* EEEEEPA! Algo de errado não está certo! 😢 \"}"
+
+    - name: Notify Release
+      if: inputs.hasCommit && !inputs.hasError
+      run: |
+        curl --location --request POST '${{ env.CHAT_URL }}' \
+        -H "Content-type: application/json; charset=utf-8" \
+        -d "{\"text\":\"*${{ inputs.appName }}:* Concluída Build e Release/Tag Criada\"}"
+
+    - name: Notify Unnecessary and Deploy Release
+      if: needs.check-commit.outputs.count == 0 
+      run: |
+        curl --location --request POST '${{ env.CHAT_URL }}' \
+        -H "Content-type: application/json; charset=utf-8" \
+        -d "{\"text\":\"*${{ inputs.appName }}:* Nenhum \`commit\` desde o último Release/Tag, não será realizado um Deploy\"}"
         
