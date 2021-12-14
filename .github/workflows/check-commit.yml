@@ -5,12 +5,16 @@ on:
     secrets:
       VRPACKAGETOKEN:
         required: true
+    outputs:
+      count:
+        description: "The count of commits in main branch since last tag created"
+        value: ${{ jobs.get-commit-count.outputs.count }}
 
 jobs:
   get-commit-count:
     runs-on: ubuntu-latest
     outputs:
-      count: ${{ steps.get-commit-count.outputs.commit_count }}
+      count: ${{ steps.check_changes.outputs.commit_count }}
       status: ${{ job.status }}
     steps:
       - name: Checkout
