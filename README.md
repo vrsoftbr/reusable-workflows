@@ -27,7 +27,32 @@ jobs:
 ```
 
 ## Chat Notify (chat-notify.yml)
-Utilizada para verificar a quantidade de commits que houveram na branch main, desde a última tag/release criada
+Utilizada para notificar no Google Chat, no Space: **Célula Web + Jira + GitHub** mensagens personalizadas
+
+### Inputs:
+
+- `appName` nome da aplicação que irá enviar a notificação **[obrigatório]**
+- `mensagem` informa o conteúdo da mensagem **[obrigatório]**
+- `problem` informa se é uma mensagem comum (`false`), ou um aviso sobre problema (`true`) **[obrigatório]**
+
+### Exemplo
+```
+...
+jobs:
+  notify:
+    name: Notify
+    uses: vrsoftbr/reusable-workflows/.github/workflows/chat-notify.yml@main
+    if: ${{ always() }}
+    needs: [check-commit, build-api]
+    with:
+      appName: VRFinanceiroWeb
+      mensagem: Concluída Build e Deploy Realizado
+      hasError: false
+...
+```
+
+## Chat Notify Deploy (chat-notify-deploy.yml)
+Utilizada para notificar no Google Chat, no Space: **Célula Web + Jira + GitHub** sobre novos deploys
 
 ### Inputs:
 
@@ -41,7 +66,7 @@ Utilizada para verificar a quantidade de commits que houveram na branch main, de
 jobs:
   notify:
     name: Notify
-    uses: vrsoftbr/reusable-workflows/.github/workflows/chat-notify.yml@main
+    uses: vrsoftbr/reusable-workflows/.github/workflows/chat-notify-deploy.yml@main
     if: ${{ always() }}
     needs: [check-commit, build-api]
     with:
