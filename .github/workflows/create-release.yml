@@ -1,0 +1,41 @@
+name: Create Release
+
+on:
+  workflow_call:
+    inputs:
+      versao:
+        required: true
+        type: string
+
+
+jobs:
+  send-message:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        echo "versao:" ${{ inputs.versao }}
+
+    - name: Generate Changelog Content
+      run: ./changelog.sh ${{ inputs.versao }}
+
+    - name: Git Config
+      run: git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com" && git config --global user.name "${GITHUB_ACTOR}" 
+
+    - name: Git Commit and Push
+      run: |
+        git add .
+        git commit -m "Generate CHANGELOG.md"
+        git push
+    
+    - name: Create Release
+      if: needs.check-commit.outputs.exist
+      uses: ncipollo/release-action@v1
+      with:
+        name: v${{ inputs.versao }}
+        tag: v${{ inputs.versao }}
+        commit: main
+        draft: false
+        prerelease: false
+        token: ${{ secrets.VRPACKAGETOKEN }}
+    
