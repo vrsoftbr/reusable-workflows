@@ -17,7 +17,113 @@ jobs:
         echo "versao:" ${{ inputs.versao }}
 
     - name: Generate Changelog Content
-      run: ./changelog.sh ${{ inputs.versao }}
+      run: |
+        QTD_VER=20
+        ULTIMA_VERSAO=${{ inputs.versao }}
+
+        TAGS=$(\
+            git describe --tags \
+            `git log --simplify-by-decoration --decorate --pretty=oneline \
+            | fgrep 'tag: ' \
+            | head -n $QTD_VER \
+            | grep -o '^[a-z0-9]\+'` \
+            --abbrev=0 \
+            | sort \
+            | tr '\n' ' ' \
+            |  sed  's/ /../'\
+            | sed 's/ /|/g'\
+            | sed 's/\.\./|/g'\
+            )
+
+        TAGS+="HEAD"
+
+        LAST_ITEM=$((QTD_VER-1))
+
+        NOTAS_VERSAO='# CHANGELOG\n\n'
+        NOTAS_VERSAO+="Esse arquivo é gerado automaticamente sempre que uma nova versão é lançada, por isso, não é necessário editá-lo.\n\n"
+        NOTAS_VERSAO+="Alterado em: `date`\n\n"
+
+        IFS='|' # pipe is set as delimiter
+        read -ra TAGS_ITEM <<< "$TAGS"   # str is read into an array as tokens separated by IFS
+
+        for (( i=0 ; i<QTD_VER ; i++ )); do
+            if [[ $i != $LAST_ITEM ]]; then 
+
+                VERSAO=${TAGS_ITEM[~i]}
+
+                if [[ $VERSAO == "HEAD" ]]; then
+                    VERSAO="$ULTIMA_VERSAO"
+                fi
+
+                INTERVAL="${TAGS_ITEM[~i-1]}..${TAGS_ITEM[~i]}"
+
+                #obtem os hashes dos commits das ultimas tags criadas
+                HASHES=$(git log $INTERVAL --format=%H --no-merges | tr '\n' '|')
+
+                HASHES+="$HASHES_UNTAGED"
+                SAVEIFS=$IFS   # Save current IFS
+                IFS=$'|'      # Change IFS to new line
+                HASHES=($HASHES) # split to array $HASHES
+                IFS=$SAVEIFS   # Restore IFS
+
+                NOTAS_BUG=''
+                NOTAS_FEATURE=''
+
+                for (( j=0; j<${#HASHES[@]}; j++ )); do
+                    COMMITMSG=$(git log -1 --format=%B ${HASHES[$j]})
+                    COMMITMSG=$(echo $COMMITMSG | sed "s/<rnf>/<RNF>/g; s/<\/rnf>/<\/RNF>/g")
+                    COMMITMSG=$(echo $COMMITMSG | sed "s/<rnb>/<RNB>/g; s/<\/rnb>/<\/RNB>/g")
+                    COMMITMSG=$(echo $COMMITMSG | tr '\n' ' ')
+
+                    TAGB=$(echo $COMMITMSG | grep -o "<RNB>" | wc -l)
+                    TAGBFINAL=$(echo $COMMITMSG | grep -o "</RNB>" | wc -l)
+                    TAGF=$(echo $COMMITMSG | grep -o "<RNF>" | wc -l)
+                    TAGFFINAL=$(echo $COMMITMSG | grep -o "</RNF>" | wc -l)
+
+
+                    if [[ $COMMITMSG =~ ^[A-Z]{3}.[0-9]*.*RN[F|B].*\/RN[F|B] ]]; then
+                        #obtem o número da tarefa que originou o commit
+                        ISSUE=$(sed -E "s/(^[A-Z]{3}.[0-9]*).*(<RN[F|B]>)(.*)(<\/RN[F|B])(.*)/\1/g" <<< $(echo $COMMITMSG))
+
+                        #obtem o tipo de tag
+                        TYPE=$(sed -E "s/(^[A-Z]{3}.[0-9]*).*(<RN[F|B]>)(.*)(<\/RN[F|B])(.*)/\2/g" <<< $(echo $COMMITMSG))
+
+                        # obtem somente o conteudo da tag sem espacos no inicio
+                        TAG_CONTENT=$(sed -E "s/(^[A-Z]{3}.[0-9]*).*(<RN[F|B]>)(.*)(<\/RN[F|B])(.*)/\3/g" <<< $(echo $COMMITMSG))
+
+                        # remove espaços em branco no inicio da string
+                        TAG_CONTENT="$(echo $TAG_CONTENT | sed 's/^[[:space:]]*//g' | sed 's/  //g')"
+
+                        # adicionar o traço (-) no inicio da string se não existir
+                        TAG_CONTENT="$([[ $TAG_CONTENT == -* ]] && echo '' || echo '- ')$TAG_CONTENT"
+
+                        if [[ $TYPE == "<RNF>" ]] && [[ $TAGF == $TAGFFINAL ]]; then
+                            NOTAS_FEATURE+="$TAG_CONTENT ($ISSUE)\n"
+                        elif [[ $TYPE == "<RNB>" ]] && [[ $TAGB == $TAGBFINAL ]]; then
+                            NOTAS_BUG+="$TAG_CONTENT ($ISSUE)\n"
+                        fi
+                    fi    
+                done
+
+                NOTAS_VERSAO+=`echo \#\# $VERSAO | sed 's/v//g'`
+                NOTAS_VERSAO+="\n"
+                if ! [ -z "$NOTAS_BUG" ]; then
+                    NOTAS_VERSAO+="\n**Correções**\n"
+                    NOTAS_VERSAO+="$NOTAS_BUG\n"
+                fi
+
+                if ! [ -z "$NOTAS_FEATURE" ]; then
+                    NOTAS_VERSAO+="\n**Novos Recursos**\n"
+                    NOTAS_VERSAO+="$NOTAS_FEATURE\n"
+                fi
+
+                if [ -z "$NOTAS_FEATURE" ] && [ -z "$NOTAS_BUG" ]; then
+                    NOTAS_VERSAO+="\n**Melhorias de performance e correções diversas**\n"
+                fi
+            fi
+        done
+
+        echo -e "$NOTAS_VERSAO" > CHANGELOG.md
 
     - name: Git Config
       run: git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com" && git config --global user.name "${GITHUB_ACTOR}" 
