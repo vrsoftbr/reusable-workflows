@@ -134,7 +134,6 @@ jobs:
             fi
         done
 
-        echo "CHANGELOG=$NOTAS_ULTIMA_VERSAO" >> $GITHUB_ENV
         echo -e "$NOTAS_VERSAO" > CHANGELOG.md
 
     - name: Git Config
@@ -151,7 +150,6 @@ jobs:
       with:
         name: ${{ inputs.versao }}
         tag: ${{ inputs.versao }}
-        body: ${{ env.CHANGELOG }}
         commit: main
         draft: false
         prerelease: false
