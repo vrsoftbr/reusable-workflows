@@ -30,7 +30,7 @@ jobs:
       run: |
         QTD_VER=20
         ULTIMA_VERSAO=${{ inputs.versao }}
-
+        
         TAGS=$(\
             git describe --tags \
             `git log --simplify-by-decoration --decorate --pretty=oneline --reverse \
@@ -134,6 +134,7 @@ jobs:
             fi
         done
 
+        echo -e "CHANGELOG=$NOTAS_ULTIMA_VERSAO"
         echo -e "$NOTAS_VERSAO" > CHANGELOG.md
 
     - name: Git Config
