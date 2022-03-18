@@ -37,8 +37,6 @@ jobs:
 
         TAGS+="HEAD"
 
-        LAST_ITEM=$((QTD_VER-1))
-
         NOTAS_VERSAO='# CHANGELOG\n\n'
         NOTAS_VERSAO+="Esse arquivo é gerado automaticamente sempre que uma nova versão é lançada, por isso, não é necessário editá-lo.\n\n"
         NOTAS_VERSAO+="Alterado em: `date`\n\n"
@@ -46,7 +44,9 @@ jobs:
         IFS='|' # pipe is set as delimiter
         read -ra TAGS_ITEM <<< "$TAGS"   # str is read into an array as tokens separated by IFS
 
-        for (( i=0 ; i<QTD_VER ; i++ )); do
+        LAST_ITEM=$((${#TAGS_ITEM[@]}-1))
+
+        for (( i=0 ; i<${#TAGS_ITEM[@]} ; i++ )); do
             if [[ $i != $LAST_ITEM ]]; then 
 
                 VERSAO=${TAGS_ITEM[~i]}
