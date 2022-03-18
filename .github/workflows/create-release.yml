@@ -33,12 +33,11 @@ jobs:
 
         TAGS=$(\
             git describe --tags \
-            `git log --simplify-by-decoration --decorate --pretty=oneline \
+            `git log --simplify-by-decoration --decorate --pretty=oneline --reverse \
             | fgrep 'tag: ' \
-            | head -n $QTD_VER \
             | grep -o '^[a-z0-9]\+'` \
             --abbrev=0 \
-            | sort \
+            | tail -n $QTD_VER \
             | tr '\n' ' ' \
             |  sed  's/ /../'\
             | sed 's/ /|/g'\
@@ -59,11 +58,7 @@ jobs:
         for (( i=0 ; i<${#TAGS_ITEM[@]} ; i++ )); do
             if [[ $i != $LAST_ITEM ]]; then 
 
-                VERSAO=${TAGS_ITEM[~i]}
-
-                if [[ $VERSAO == "HEAD" ]]; then
-                    VERSAO="$ULTIMA_VERSAO"
-                fi
+                VERSAO="$([[ ${TAGS_ITEM[~i]} == "HEAD" ]] && echo $ULTIMA_VERSAO || echo ${TAGS_ITEM[~i]})"
 
                 INTERVAL="${TAGS_ITEM[~i-1]}..${TAGS_ITEM[~i]}"
 
