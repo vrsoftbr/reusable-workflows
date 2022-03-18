@@ -129,10 +129,15 @@ jobs:
                     NOTAS_ITEM+="\n**Melhorias de performance e correções diversas**\n"
                 fi
 
+                if [ ${TAGS_ITEM[~i]} == "HEAD" ]; then
+                    ULTIMA_NOTA_VERSAO="$NOTAS_ITEM"
+                fi
+
                 CHANGELOG+="$NOTAS_ITEM"
             fi
         done
 
+        echo -e "$ULTIMA_NOTA_VERSAO"
         echo -e "$CHANGELOG" > CHANGELOG.md
 
     - name: Git Config
