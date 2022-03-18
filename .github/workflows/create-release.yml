@@ -145,6 +145,7 @@ jobs:
       with:
         name: v${{ inputs.versao }}
         tag: v${{ inputs.versao }}
+        body: "#This is a Test\n - Iten 1\n **Bold Content**"
         commit: main
         draft: false
         prerelease: false
