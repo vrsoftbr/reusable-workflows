@@ -12,7 +12,7 @@ on:
 
 
 jobs:
-  send-message:
+  create-release:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
@@ -140,7 +140,6 @@ jobs:
         git push
     
     - name: Create Release
-      if: needs.check-commit.outputs.exist
       uses: ncipollo/release-action@v1
       with:
         name: v${{ inputs.versao }}
