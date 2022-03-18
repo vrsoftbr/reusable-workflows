@@ -137,11 +137,12 @@ jobs:
             fi
         done
 
-        echo -e "$ULTIMA_NOTA_VERSAO"
-        
-        echo -e "NOTA_VERSAO=$ULTIMA_NOTA_VERSAO" >> $GITHUB_ENV
-        
+        echo -e "$ULTIMA_NOTA_VERSAO" > NOTAS.txt
         echo -e "$CHANGELOG" > CHANGELOG.md
+        
+        echo 'NOTAS<<EOF' >> $GITHUB_ENV
+        cat NOTAS.txt >> $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
 
     - name: Git Config
       run: git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com" && git config --global user.name "${GITHUB_ACTOR}" 
