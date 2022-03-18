@@ -130,7 +130,7 @@ jobs:
                 fi
 
                 if [ ${TAGS_ITEM[~i]} == "HEAD" ]; then
-                    ULTIMA_NOTA_VERSAO="$NOTAS_ITEM"
+                    ULTIMA_NOTA_VERSAO="$NOTAS_ITEM\n"
                 fi
 
                 CHANGELOG+="$NOTAS_ITEM"
