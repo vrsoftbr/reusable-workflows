@@ -150,7 +150,7 @@ jobs:
     - name: Git Commit and Push
       run: |
         git add .
-        git commit -m "Generate CHANGELOG.md"
+        git commit -m "Generate CHANGELOG.md (${{ inputs.versao }})"
         git push
     
     - name: Create Release
@@ -158,6 +158,7 @@ jobs:
       with:
         name: ${{ inputs.versao }}
         tag: ${{ inputs.versao }}
+        body: $NOTAS
         commit: main
         draft: false
         prerelease: false
