@@ -30,7 +30,7 @@ jobs:
       run: |
         QTD_VER=20
         ULTIMA_VERSAO=${{ inputs.versao }}
-        
+
         TAGS=$(\
             git describe --tags \
             `git log --simplify-by-decoration --decorate --pretty=oneline --reverse \
@@ -50,8 +50,6 @@ jobs:
         NOTAS_VERSAO+="Esse arquivo é gerado automaticamente sempre que uma nova versão é lançada, por isso, não é necessário editá-lo.\n\n"
         NOTAS_VERSAO+="Alterado em: `date`\n\n"
 
-        NOTAS_ULTIMA_VERSAO=''
-
         IFS='|' # pipe is set as delimiter
         read -ra TAGS_ITEM <<< "$TAGS"   # str is read into an array as tokens separated by IFS
 
@@ -59,6 +57,8 @@ jobs:
 
         for (( i=0 ; i<${#TAGS_ITEM[@]} ; i++ )); do
             if [[ $i != $LAST_ITEM ]]; then 
+
+                VERSAO="$([[ ${TAGS_ITEM[~i]} == "HEAD" ]] && echo $ULTIMA_VERSAO || echo ${TAGS_ITEM[~i]})"
 
                 INTERVAL="${TAGS_ITEM[~i-1]}..${TAGS_ITEM[~i]}"
 
@@ -110,31 +110,24 @@ jobs:
                     fi    
                 done
 
-                VERSAO="$([[ ${TAGS_ITEM[~i]} == "HEAD" ]] && echo $ULTIMA_VERSAO || echo ${TAGS_ITEM[~i]})"
-
-                NOTAS_ITEM=`echo \#\# $VERSAO | sed 's/v//g'`
-                NOTAS_ITEM+="\n"
+                NOTAS_VERSAO+=`echo \#\# $VERSAO | sed 's/v//g'`
+                NOTAS_VERSAO+="\n"
                 if ! [ -z "$NOTAS_BUG" ]; then
-                    NOTAS_ITEM+="\n**Correções**\n"
-                    NOTAS_ITEM+="$NOTAS_BUG\n"
+                    NOTAS_VERSAO+="\n**Correções**\n"
+                    NOTAS_VERSAO+="$NOTAS_BUG\n"
                 fi
 
                 if ! [ -z "$NOTAS_FEATURE" ]; then
-                    NOTAS_ITEM+="\n**Novos Recursos**\n"
-                    NOTAS_ITEM+="$NOTAS_FEATURE\n"
+                    NOTAS_VERSAO+="\n**Novos Recursos**\n"
+                    NOTAS_VERSAO+="$NOTAS_FEATURE\n"
                 fi
 
                 if [ -z "$NOTAS_FEATURE" ] && [ -z "$NOTAS_BUG" ]; then
-                    NOTAS_ITEM+="\n**Melhorias de performance e correções diversas**\n"
+                    NOTAS_VERSAO+="\n**Melhorias de performance e correções diversas**\n"
                 fi
-
-                NOTAS_ULTIMA_VERSAO+="$([[ ${TAGS_ITEM[~i]} == "HEAD" ]] && echo $NOTAS_ITEM)"
-
-                NOTAS_VERSAO+="$NOTAS_ITEM"
             fi
         done
 
-        echo -e "CHANGELOG=$NOTAS_ULTIMA_VERSAO"
         echo -e "$NOTAS_VERSAO" > CHANGELOG.md
 
     - name: Git Config
