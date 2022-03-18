@@ -9,12 +9,18 @@ on:
       versao:
         required: true
         type: string
+    outputs:
+      status:
+        description: "The status of executin of workflow"
+        value: ${{ jobs.create-release.outputs.status }}
 
 
 jobs:
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
+    outputs:
+      status: ${{ job.status }}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
