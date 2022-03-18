@@ -130,7 +130,7 @@ jobs:
                 fi
 
                 if [ ${TAGS_ITEM[~i]} == "HEAD" ]; then
-                    ULTIMA_NOTA_VERSAO="$NOTAS_ITEM\n"
+                    ULTIMA_NOTA_VERSAO="$NOTAS_ITEM"
                 fi
 
                 CHANGELOG+="$NOTAS_ITEM"
@@ -139,9 +139,9 @@ jobs:
 
         echo -e "$ULTIMA_NOTA_VERSAO"
         
-        echo 'NOTA_VERSAO<<EOF' >> $GITHUB_ENV
+        echo 'NOTA_VERSAO<<\n' >> $GITHUB_ENV
         "$ULTIMA_NOTA_VERSAO" >> $GITHUB_ENV
-        echo 'EOF' >> $GITHUB_ENV
+        echo '\n' >> $GITHUB_ENV
         
         echo -e "$CHANGELOG" > CHANGELOG.md
 
