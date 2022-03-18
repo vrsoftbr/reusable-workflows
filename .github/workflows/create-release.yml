@@ -2,6 +2,9 @@ name: Create Release
 
 on:
   workflow_call:
+    secrets:
+      VRPACKAGETOKEN:
+        required: true
     inputs:
       versao:
         required: true
