@@ -158,7 +158,7 @@ jobs:
       with:
         name: ${{ inputs.versao }}
         tag: ${{ inputs.versao }}
-        body: $NOTAS
+        body: "${{ env.NOTAS }}"
         commit: main
         draft: false
         prerelease: false
