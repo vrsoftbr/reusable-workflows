@@ -139,9 +139,7 @@ jobs:
 
         echo -e "$ULTIMA_NOTA_VERSAO"
         
-        echo 'NOTA_VERSAO<<\n' >> $GITHUB_ENV
-        "$ULTIMA_NOTA_VERSAO" >> $GITHUB_ENV
-        echo '\n' >> $GITHUB_ENV
+        echo -e "NOTA_VERSAO=$ULTIMA_NOTA_VERSAO" >> $GITHUB_ENV
         
         echo -e "$CHANGELOG" > CHANGELOG.md
 
