@@ -39,14 +39,14 @@ jobs:
             --abbrev=0 \
             | tail -n $QTD_VER \
             | tr '\n' ' ' \
-            |  sed  's/ /../'\
+            | sed  's/ /../'\
             | sed 's/ /|/g'\
             | sed 's/\.\./|/g'\
             )
 
         TAGS+="HEAD"
 
-        CHANGELOG='# CHANGELOG\n\n'
+        CHANGELOG="# CHANGELOG\n\n"
         CHANGELOG+="Esse arquivo é gerado automaticamente sempre que uma nova versão é lançada, por isso, não é necessário editá-lo.\n\n"
         CHANGELOG+="Alterado em: `date`\n\n"
 
@@ -60,7 +60,9 @@ jobs:
         for (( i=0 ; i<${#TAGS_ITEM[@]} ; i++ )); do
             if [[ $i != $LAST_ITEM ]]; then 
 
-                VERSAO="$([[ ${TAGS_ITEM[~i]} == "HEAD" ]] && echo $ULTIMA_VERSAO || echo ${TAGS_ITEM[~i]})"
+                VERSAO="$([[ ${TAGS_ITEM[~i]} == "HEAD" ]] && echo $ULTIMA_VERSAO || echo ${TAGS_ITEM[~i]} | sed 's/v//g')"
+
+                CHANGELOG+="## $VERSAO\n"
 
                 INTERVAL="${TAGS_ITEM[~i-1]}..${TAGS_ITEM[~i]}"
 
@@ -113,8 +115,6 @@ jobs:
                     fi    
                 done
 
-                NOTAS_ITEM+=`echo \#\# $VERSAO | sed 's/v//g'`
-                NOTAS_ITEM+="\n"
                 if ! [ -z "$NOTAS_BUG" ]; then
                     NOTAS_ITEM+="\n**Correções**\n"
                     NOTAS_ITEM+="$NOTAS_BUG\n"
@@ -126,7 +126,7 @@ jobs:
                 fi
 
                 if [ -z "$NOTAS_FEATURE" ] && [ -z "$NOTAS_BUG" ]; then
-                    NOTAS_ITEM+="\n**Melhorias de performance e correções diversas**\n"
+                    NOTAS_ITEM+="\n**Melhorias de performance e correções diversas**\n\n"
                 fi
 
                 if [ ${TAGS_ITEM[~i]} == "HEAD" ]; then
