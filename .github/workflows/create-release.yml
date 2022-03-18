@@ -143,7 +143,6 @@ jobs:
         "$ULTIMA_NOTA_VERSAO" >> $GITHUB_ENV
         echo 'EOF' >> $GITHUB_ENV
         
-        echo -e "NOTA_VERSAO=$ULTIMA_NOTA_VERSAO" >> $GITHUB_ENV
         echo -e "$CHANGELOG" > CHANGELOG.md
 
     - name: Git Config
