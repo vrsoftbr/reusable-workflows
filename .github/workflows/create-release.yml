@@ -165,7 +165,7 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         name: ${{ inputs.versao }}
-        tag: ${{ inputs.versao }}
+        tag: v${{ inputs.versao }}
         body: "${{ env.NOTAS }}"
         commit: main
         draft: false
