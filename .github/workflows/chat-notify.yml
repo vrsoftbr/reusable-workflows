@@ -32,12 +32,14 @@ jobs:
       id: write-message-content
       run: |
         MESSAGE_CONTENT=$(echo -e "${{ inputs.message }}")
+        echo -e "$MESSAGE_CONTENT"
         echo "MESSAGE=$MESSAGE_CONTENT" >> $GITHUB_ENV
         echo ::set-output name=message::$NEW_VERSION
         
     - name: Notify 
       if: inputs.problem == false
       run: |
+        echo ${{needs.write-message-content.outputs.message}}
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         -H "Content-type: application/json; charset=utf-8" \
         -d "{\"text\":\"*${{ inputs.appName }}:* ${{needs.write-message-content.outputs.message}}\"}"        
