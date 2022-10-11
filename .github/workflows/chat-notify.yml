@@ -102,7 +102,5 @@ jobs:
         }'
         EOF
         )
-        echo $MESSAGE
-        curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
-        --header 'Content-Type: application/json' \
-        --data-raw $MSG
+        echo $MSG
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' --header 'Content-Type: application/json' --data-raw $MSG
