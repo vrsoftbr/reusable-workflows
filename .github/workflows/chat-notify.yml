@@ -32,7 +32,7 @@ jobs:
       id: write-message-content
       run: |
         wget -q https://storage.googleapis.com/imagem-aplicativos/bot/message-card-teste.json
-        MESSAGE_CONTENT=$(cat message-card-teste.json)
+        MESSAGE_CONTENT=$(cat message-card-teste.json | json_pp)
         echo "Message Content: $MESSAGE_CONTENT"
         echo ::set-output name=message::$MESSAGE_CONTENT
         echo "MESSAGE=$MESSAGE_CONTENT" >> $GITHUB_ENV
