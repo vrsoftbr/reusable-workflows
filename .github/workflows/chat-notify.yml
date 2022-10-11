@@ -39,8 +39,6 @@ jobs:
     - name: Notify 
       if: inputs.problem == false
       run: |
-        echo $MESSAGE
-        echo ${{needs.write-message-content.outputs.message}}
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         -H "Content-type: application/json; charset=utf-8" \
-        -d "{\"text\":\"*${{ inputs.appName }}:* ${{needs.write-message-content.outputs.message}}\"}"        
+        -d "{\"text\":\"*${{ inputs.appName }}:* $MESSAGE\"}"        
