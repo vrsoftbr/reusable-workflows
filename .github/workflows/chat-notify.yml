@@ -103,4 +103,4 @@ jobs:
         EOF
         )
         echo $MSG
-        curl --location --request POST '${{ inputs.urlChatWebHooks }}' --header 'Content-Type: application/json' --data-raw $MSG
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' --header 'Content-Type: application/json' -d "{\"text\":\"*Testeeeee\"}"
