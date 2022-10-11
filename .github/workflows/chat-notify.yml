@@ -48,4 +48,4 @@ jobs:
         echo $MESSAGE
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         --header 'Content-Type: application/json' \
-        --data-raw '$MESSAGE'
+        --data-raw '${{ MESSAGE }}'
