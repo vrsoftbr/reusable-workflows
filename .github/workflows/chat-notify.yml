@@ -37,7 +37,7 @@ jobs:
         echo ::set-output name=message::$MESSAGE_CONTENT
         
         echo 'MESSAGE<<EOF' >> $GITHUB_ENV
-        $MESSAGE_CONTENT >> $GITHUB_ENV
+        cat message-card-teste.json | json_pp >> $GITHUB_ENV
         echo 'EOF' >> $GITHUB_ENV
         
         rm message-card-teste.json
