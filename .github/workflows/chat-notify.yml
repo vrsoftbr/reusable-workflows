@@ -45,62 +45,59 @@ jobs:
     - name: Notify
       if: inputs.problem == false
       run: |
-        MSG=$(cat <<EOF
-        {
-          "cardsV2": [
-            {
-              "cardId": "unique-card-id",
-              "card": {
-                "header": {
-                  "title": "GitHub Actions",
-                  "subtitle": "VR Software",
-                  "imageUrl": "https://storage.googleapis.com/imagem-aplicativos/bot/bot-github.png",
-                  "imageType": "CIRCLE",
-                  "imageAltText": "GitHub Actions - VR Software"
-                },
-                "sections": [
-                  {
-                    "header": "App Name",
-                    "collapsible": false,
-                    "widgets": [
-                      {
-                        "decoratedText": {
-                          "startIcon": {
-                            "knownIcon": "EMAIL"
-                          },
-                          "text": "Versão 0.0.0 do App Name está diponível"
-                        }
-                      },
-                      {
-                        "buttonList": {
-                          "buttons": [
-                            {
-                              "text": "Ver Releases",
-                              "onClick": {
-                                "openLink": {
-                                  "url": "https://github.com/vrsoftbr/VRComponents/releases"
-                                }
-                              }
+        curl --location --request POST 'https://chat.googleapis.com/v1/spaces/AAAA-DihAIw/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=jaDsnVqY7kFx0r_im0IF3NTBtKsouYgtmEvU_WaDiJE%3D' \
+        --header 'Content-Type: application/json' \
+        --data-raw '{
+            "cardsV2": [
+              {
+                "cardId": "unique-card-id",
+                "card": {
+                  "header": {
+                    "title": "GitHub Actions",
+                    "subtitle": "VR Software",
+                    "imageUrl": "https://storage.googleapis.com/imagem-aplicativos/bot/bot-github.png",
+                    "imageType": "CIRCLE",
+                    "imageAltText": "GitHub Actions - VR Software"
+                  },
+                  "sections": [
+                    {
+                      "header": "App Name",
+                      "collapsible": false,
+                      "widgets": [
+                        {
+                          "decoratedText": {
+                            "startIcon": {
+                              "knownIcon": "EMAIL"
                             },
-                            {
-                              "text": "Ver Packages",
-                              "onClick": {
-                                "openLink": {
-                                  "url": "https://github.com/orgs/vrsoftbr/packages?repo_name=VRComponents"
+                            "text": "Versão 0.0.0 do App Name está diponível"
+                          }
+                        },
+                        {
+                          "buttonList": {
+                            "buttons": [
+                              {
+                                "text": "Ver Releases",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/VRComponents/releases"
+                                  }
+                                }
+                              },
+                              {
+                                "text": "Ver Packages",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/orgs/vrsoftbr/packages?repo_name=VRComponents"
+                                  }
                                 }
                               }
-                            }
-                          ]
+                            ]
+                          }
                         }
-                      }
-                    ]
-                  }
-                ]
+                      ]
+                    }
+                  ]
+                }
               }
-            }
-          ]
-        }
-        EOF
-        )
-        echo $MSG
-        curl --location --request POST '${{ inputs.urlChatWebHooks }}' --header 'Content-Type: application/json' -d "{\"text\":\"*Testeeeee\"}"
+            ]
+          }'        
