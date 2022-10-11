@@ -46,7 +46,7 @@ jobs:
       if: inputs.problem == false
       run: |
         MSG=$(cat <<EOF
-        '{
+        {
           "cardsV2": [
             {
               "cardId": "unique-card-id",
@@ -99,7 +99,7 @@ jobs:
               }
             }
           ]
-        }'
+        }
         EOF
         )
         echo $MSG
