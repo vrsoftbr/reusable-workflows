@@ -13,30 +13,30 @@ on:
       problem:
         required: true
         type: boolean
+      urlChatWebHooks:
+        required: true
+        type: string
 
 jobs:
   send-message:
     name: Send Message
     runs-on: ubuntu-latest
-    env:
-      CHAT_URL: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=1-qRFuszkgYW7Dwdh4XKthh_fQylN6EYQjeONdp466c%3D
-      CHAT_URL_PROBLEM: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=mUvWltGCPr38a4sxnHrrWrIsn72x9FgpLX3aM3aIAws%3D
     steps:
     - run: |
         echo "appName:" ${{ inputs.appName }}
         echo "message:" ${{ inputs.message }}
         echo "problem:" ${{ inputs.problem }}
+        echo "urlChatWebHooks:" ${{ inputs.urlChatWebHooks }}
         
-    - name: Notify Problem
-      if: inputs.problem == true
+    - name: Write Message Content
       run: |
-        curl --location --request POST '${{ env.CHAT_URL_PROBLEM }}' \
-        -H "Content-type: application/json; charset=utf-8" \
-        -d "{\"text\":\"*${{ inputs.appName }}:* ${{ inputs.message }} \"}"
-
+        MESSAGE_CONTENT=`Um, dois, três... teste... som... um, dois`
+        echo "MESSAGE=$MESSAGE_CONTENT" >> $GITHUB_ENV
+        echo ::set-output name=message::$NEW_VERSION
+        
     - name: Notify 
       if: inputs.problem == false
       run: |
-        curl --location --request POST '${{ env.CHAT_URL }}' \
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         -H "Content-type: application/json; charset=utf-8" \
         -d "{\"text\":\"*${{ inputs.appName }}:* ${{ inputs.message }}\"}"        
