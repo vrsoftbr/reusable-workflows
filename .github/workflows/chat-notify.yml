@@ -31,8 +31,8 @@ jobs:
     - name: Write Message Content
       id: write-message-content
       run: |
-        wget -q https://storage.googleapis.com/imagem-aplicativos/bot/message-card-teste.json
-        MESSAGE_CONTENT=$(cat message-card-teste.json | json_pp)
+        wget -q https://storage.googleapis.com/imagem-aplicativos/bot/message-card-deploy.json
+        MESSAGE_CONTENT=$(cat message-card-deploy.json | json_pp)
         echo "Message Content: $MESSAGE_CONTENT"
         echo ::set-output name=message::$MESSAGE_CONTENT
         
@@ -42,9 +42,9 @@ jobs:
         
         rm message-card-teste.json
         
-    - name: Notify 
+    - name: Notify
       if: inputs.problem == false
       run: |
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
-        -H "Content-type: application/json; charset=utf-8" \
-        -d $MESSAGE        
+        --header 'Content-Type: application/json' \
+        --data-raw '$MESSAGE'
