@@ -37,14 +37,15 @@ jobs:
         echo ::set-output name=message::$MESSAGE_CONTENT
         
         echo 'MESSAGE<<EOF' >> $GITHUB_ENV
-        cat message-card-teste.json | json_pp >> $GITHUB_ENV
+        cat message-card-deploy.json | json_pp >> $GITHUB_ENV
         echo 'EOF' >> $GITHUB_ENV
         
-        rm message-card-teste.json
+        rm message-card-deploy.json
         
     - name: Notify
       if: inputs.problem == false
       run: |
+        echo $MESSAGE
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         --header 'Content-Type: application/json' \
         --data-raw '$MESSAGE'
