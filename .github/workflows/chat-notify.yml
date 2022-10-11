@@ -31,7 +31,7 @@ jobs:
     - name: Write Message Content
       id: write-message-content
       run: |
-        MESSAGE_CONTENT=$(echo -e "${{ inputs.message }}")
+        MESSAGE_CONTENT=$(cat ./res/message-card.json)
         echo "Message Content: $MESSAGE_CONTENT"
         echo ::set-output name=message::$MESSAGE_CONTENT
         echo "MESSAGE=$MESSAGE_CONTENT" >> $GITHUB_ENV
