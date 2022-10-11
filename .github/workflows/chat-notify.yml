@@ -47,4 +47,4 @@ jobs:
       run: |
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         -H "Content-type: application/json; charset=utf-8" \
-        -d "{\"text\":\"*${{ inputs.appName }}:* $MESSAGE\"}"        
+        -d $MESSAGE        
