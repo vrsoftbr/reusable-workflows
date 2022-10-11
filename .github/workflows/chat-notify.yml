@@ -35,7 +35,12 @@ jobs:
         MESSAGE_CONTENT=$(cat message-card-teste.json | json_pp)
         echo "Message Content: $MESSAGE_CONTENT"
         echo ::set-output name=message::$MESSAGE_CONTENT
-        echo "MESSAGE=$MESSAGE_CONTENT" >> $GITHUB_ENV
+        
+        echo 'MESSAGE<<EOF' >> $GITHUB_ENV
+        $MESSAGE_CONTENT >> $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
+        
+        rm message-card-teste.json
         
     - name: Notify 
       if: inputs.problem == false
