@@ -40,5 +40,5 @@ jobs:
           COMMIT_EXIST=$([ "$COMMIT_COUNT" == 0 ] && echo "false" || echo "true")
           echo "Commits since last tag: $COMMIT_COUNT"
           echo "Has commits since last tag: $COMMIT_EXIST"
-          echo ::set-output name=commit_count::$COMMIT_COUNT
-          echo ::set-output name=commit_exist::$COMMIT_EXIST
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          echo "commit_exist=$COMMIT_EXIST" >> $GITHUB_OUTPUT
