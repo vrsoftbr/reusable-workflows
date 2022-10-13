@@ -28,20 +28,6 @@ jobs:
         echo "problem:" ${{ inputs.problem }}
         echo "urlChatWebHooks:" ${{ inputs.urlChatWebHooks }}
         
-    - name: Write Message Content
-      id: write-message-content
-      run: |
-        wget -q https://storage.googleapis.com/imagem-aplicativos/bot/message-card-deploy.json
-        MESSAGE_CONTENT=$(cat message-card-deploy.json | json_pp)
-        echo "Message Content: $MESSAGE_CONTENT"
-        echo ::set-output name=message::$MESSAGE_CONTENT
-        
-        echo 'MESSAGE<<EOF' >> $GITHUB_ENV
-        cat message-card-deploy.json | json_pp >> $GITHUB_ENV
-        echo 'EOF' >> $GITHUB_ENV
-        
-        rm message-card-deploy.json
-        
     - name: Notify
       if: inputs.problem == false
       run: |
@@ -71,35 +57,43 @@ jobs:
                             },
                             "text": "${{ inputs.message }}"
                           }
-                        },
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }'
+          
+    - name: Notify Problem
+      if: inputs.problem == true
+      run: |
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
+        --header 'Content-Type: application/json' \
+        --data-raw '{
+            "cardsV2": [
+              {
+                "cardId": "unique-card-id",
+                "card": {
+                  "header": {
+                    "title": "GitHub Actions",
+                    "subtitle": "VR Software",
+                    "imageUrl": "https://storage.googleapis.com/imagem-aplicativos/bot/bot-github-problem.png",
+                    "imageType": "CIRCLE",
+                    "imageAltText": "GitHub Actions - VR Software"
+                  },
+                  "sections": [
+                    {
+                      "header": "${{ inputs.repository }}",
+                      "collapsible": false,
+                      "widgets": [
                         {
-                          "buttonList": {
-                            "buttons": [
-                              {
-                                "text": "Releases",
-                                "onClick": {
-                                  "openLink": {
-                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}/releases"
-                                  }
-                                }
-                              },
-                              {
-                                "text": "Changelog",
-                                "onClick": {
-                                  "openLink": {
-                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}/blob/main/CHANGELOG.md"
-                                  }
-                                }
-                              },
-                              {
-                                "text": "Packages",
-                                "onClick": {
-                                  "openLink": {
-                                    "url": "https://github.com/orgs/vrsoftbr/packages?repo_name=${{ inputs.repository }}"
-                                  }
-                                }
-                              }
-                            ]
+                          "decoratedText": {
+                            "startIcon": {
+                              "knownIcon": "EMAIL"
+                            },
+                            "text": "${{ inputs.message }}"
                           }
                         }
                       ]
@@ -108,4 +102,4 @@ jobs:
                 }
               }
             ]
-          }'        
+          }'          
