@@ -4,47 +4,206 @@ name: Chat Notify Deploy
 on:
   workflow_call:
     inputs:
-      appName:
+      repository:
         required: true
         type: string
-      hasCommit:
+      commit:
         required: true
         type: boolean
-      hasError:
+      problem:
         required: true
         type: boolean
+      urlChatWebHooks:
+        required: true
+        type: string
 
 jobs:
   send-message:
     name: Send Message
     runs-on: ubuntu-latest
-    env:
-      CHAT_URL: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=1-qRFuszkgYW7Dwdh4XKthh_fQylN6EYQjeONdp466c%3D
-      CHAT_URL_PROBLEM: https://chat.googleapis.com/v1/spaces/AAAAQdpzqio/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=mUvWltGCPr38a4sxnHrrWrIsn72x9FgpLX3aM3aIAws%3D
     steps:
     - run: |
-        echo "appName:" ${{ inputs.appName }}
-        echo "hasCommit:" ${{ inputs.hasCommit }}
-        echo "hasError:" ${{ inputs.hasError }}
-        
+        echo "repository:" ${{ inputs.repository }}
+        echo "message:" ${{ inputs.message }}
+        echo "problem:" ${{ inputs.problem }}
+        echo "urlChatWebHooks:" ${{ inputs.urlChatWebHooks }}
+
     - name: Notify Problem
-      if: inputs.hasError == true
+      if: inputs.problem == true
       run: |
-        curl --location --request POST '${{ env.CHAT_URL_PROBLEM }}' \
-        -H "Content-type: application/json; charset=utf-8" \
-        -d "{\"text\":\"*${{ inputs.appName }}:* EEEEEPA! Algo de errado não está certo! 😢 \"}"
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
+        --header 'Content-Type: application/json' \
+        --data-raw '{
+            "cardsV2": [
+              {
+                "cardId": "unique-card-id",
+                "card": {
+                  "header": {
+                    "title": "GitHub Actions",
+                    "subtitle": "VR Software",
+                    "imageUrl": "https://storage.googleapis.com/imagem-aplicativos/bot/bot-github-problem.png",
+                    "imageType": "CIRCLE",
+                    "imageAltText": "GitHub Actions - VR Software"
+                  },
+                  "sections": [
+                    {
+                      "header": "${{ inputs.repository }}",
+                      "collapsible": false,
+                      "widgets": [
+                        {
+                          "decoratedText": {
+                            "startIcon": {
+                              "knownIcon": "EMAIL"
+                            },
+                            "text": "Algo deu errado ao lançar uma nova versão do ${{ inputs.repository }}"
+                          }
+                        },
+                        {
+                          "buttonList": {
+                            "buttons": [
+                              {
+                                "text": "Repository",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}"
+                                  }
+                                }
+                              },
+                              {
+                                "text": "Actions",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}/actions"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }'
 
-    - name: Notify Release
-      if: inputs.hasCommit == true && inputs.hasError == false
+    - name: Notify Sucess
+      if: inputs.problem == false && inputs.commit == true
       run: |
-        curl --location --request POST '${{ env.CHAT_URL }}' \
-        -H "Content-type: application/json; charset=utf-8" \
-        -d "{\"text\":\"*${{ inputs.appName }}:* Concluída Build e Release/Tag Criada\"}"
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
+        --header 'Content-Type: application/json' \
+        --data-raw '{
+            "cardsV2": [
+              {
+                "cardId": "unique-card-id",
+                "card": {
+                  "header": {
+                    "title": "GitHub Actions",
+                    "subtitle": "VR Software",
+                    "imageUrl": "https://storage.googleapis.com/imagem-aplicativos/bot/bot-github.png",
+                    "imageType": "CIRCLE",
+                    "imageAltText": "GitHub Actions - VR Software"
+                  },
+                  "sections": [
+                    {
+                      "header": "${{ inputs.repository }}",
+                      "collapsible": false,
+                      "widgets": [
+                        {
+                          "decoratedText": {
+                            "startIcon": {
+                              "knownIcon": "EMAIL"
+                            },
+                            "text": "Uma nova versão do ${{ inputs.repository }} está disponível"
+                          }
+                        },
+                        {
+                          "buttonList": {
+                            "buttons": [
+                              {
+                                "text": "Repository",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}"
+                                  }
+                                }
+                              },
+                              {
+                                "text": "Releases",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}/releases"
+                                  }
+                                }
+                              },
+                              {
+                                "text": "Packages",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/orgs/vrsoftbr/packages?repo_name=${{ inputs.repository }}"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }'
 
-    - name: Notify Unnecessary and Deploy Release
-      if: inputs.hasCommit == false && inputs.hasError == false
+    - name: Notify Unnecessary
+      if: inputs.problem == false && inputs.commit == false
       run: |
-        curl --location --request POST '${{ env.CHAT_URL }}' \
-        -H "Content-type: application/json; charset=utf-8" \
-        -d "{\"text\":\"*${{ inputs.appName }}:* Nenhum \`commit\` desde o último Release/Tag, não será realizado um Deploy\"}"
-        
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
+        --header 'Content-Type: application/json' \
+        --data-raw '{
+            "cardsV2": [
+              {
+                "cardId": "unique-card-id",
+                "card": {
+                  "header": {
+                    "title": "GitHub Actions",
+                    "subtitle": "VR Software",
+                    "imageUrl": "https://storage.googleapis.com/imagem-aplicativos/bot/bot-github-warning.png",
+                    "imageType": "CIRCLE",
+                    "imageAltText": "GitHub Actions - VR Software"
+                  },
+                  "sections": [
+                    {
+                      "header": "${{ inputs.repository }}",
+                      "collapsible": false,
+                      "widgets": [
+                        {
+                          "decoratedText": {
+                            "startIcon": {
+                              "knownIcon": "EMAIL"
+                            },
+                            "text": "Nenhum \`commit\` desde o último Release/Tag no ${{ inputs.repository }}"
+                          }
+                        },
+                        {
+                          "buttonList": {
+                            "buttons": [
+                              {
+                                "text": "Repository",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }'
