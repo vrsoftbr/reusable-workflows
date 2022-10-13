@@ -4,7 +4,7 @@ name: Chat Notify
 on:
   workflow_call:
     inputs:
-      appName:
+      repository:
         required: true
         type: string
       message:
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - run: |
-        echo "appName:" ${{ inputs.appName }}
+        echo "repository:" ${{ inputs.repository }}
         echo "message:" ${{ inputs.message }}
         echo "problem:" ${{ inputs.problem }}
         echo "urlChatWebHooks:" ${{ inputs.urlChatWebHooks }}
@@ -61,7 +61,7 @@ jobs:
                   },
                   "sections": [
                     {
-                      "header": "${{ inputs.appName }}",
+                      "header": "${{ inputs.repository }}",
                       "collapsible": false,
                       "widgets": [
                         {
@@ -69,7 +69,7 @@ jobs:
                             "startIcon": {
                               "knownIcon": "EMAIL"
                             },
-                            "text": "Versão 0.0.0 do ${{ inputs.appName }} está diponível"
+                            "text": "${{ inputs.message }}"
                           }
                         },
                         {
@@ -79,7 +79,7 @@ jobs:
                                 "text": "Ver Releases",
                                 "onClick": {
                                   "openLink": {
-                                    "url": "https://github.com/vrsoftbr/VRComponents/releases"
+                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}/releases"
                                   }
                                 }
                               },
@@ -87,7 +87,7 @@ jobs:
                                 "text": "Ver Packages",
                                 "onClick": {
                                   "openLink": {
-                                    "url": "https://github.com/orgs/vrsoftbr/packages?repo_name=VRComponents"
+                                    "url": "https://github.com/orgs/vrsoftbr/packages?repo_name=${{ inputs.repository }}"
                                   }
                                 }
                               }
