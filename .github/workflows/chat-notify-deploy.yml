@@ -24,7 +24,7 @@ jobs:
     steps:
     - run: |
         echo "repository:" ${{ inputs.repository }}
-        echo "message:" ${{ inputs.message }}
+        echo "commit:" ${{ inputs.commit }}
         echo "problem:" ${{ inputs.problem }}
         echo "urlChatWebHooks:" ${{ inputs.urlChatWebHooks }}
 
