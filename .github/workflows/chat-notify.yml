@@ -76,7 +76,7 @@ jobs:
                           "buttonList": {
                             "buttons": [
                               {
-                                "text": "Ver Releases",
+                                "text": "Releases",
                                 "onClick": {
                                   "openLink": {
                                     "url": "https://github.com/vrsoftbr/${{ inputs.repository }}/releases"
@@ -84,7 +84,15 @@ jobs:
                                 }
                               },
                               {
-                                "text": "Ver Packages",
+                                "text": "Changelog",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/${{ inputs.repository }}/blob/main/CHANGELOG.md"
+                                  }
+                                }
+                              },
+                              {
+                                "text": "Packages",
                                 "onClick": {
                                   "openLink": {
                                     "url": "https://github.com/orgs/vrsoftbr/packages?repo_name=${{ inputs.repository }}"
