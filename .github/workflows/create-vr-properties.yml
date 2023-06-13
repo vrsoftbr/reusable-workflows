@@ -1,0 +1,22 @@
+name: Create VR Properties
+
+on:
+  workflow_call:
+
+jobs:
+  creating-vr-properties:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Creating vr.properties
+      run: |
+        sudo mkdir /vr
+        sudo chown -R $USER /vr
+        touch /vr/vr.properties
+        echo "database.ip=localhost" >> /vr/vr.properties
+        echo "database.porta=5432" >> /vr/vr.properties
+        echo "database.nome=vr" >> /vr/vr.properties
+        echo "database.usuario=postgres" >> /vr/vr.properties
+        echo "database.senha=VrPost@Server" >> /vr/vr.properties
+        echo "system.numeroloja=1" >> /vr/vr.properties
+        
+        cat /vr/vr.properties 
