@@ -1,4 +1,4 @@
-name: Create VR Properties
+name: Create VR Properties_
 
 on:
   workflow_call:
