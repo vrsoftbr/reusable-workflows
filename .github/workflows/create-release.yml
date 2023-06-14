@@ -27,7 +27,6 @@ jobs:
       with:
         token: ${{ secrets.VRPACKAGETOKEN }}
         fetch-depth: 0
-        ref: main
     
     - run: |
         echo "versao:" ${{ inputs.versao }}
@@ -167,7 +166,6 @@ jobs:
         name: ${{ inputs.versao }}
         tag: v${{ inputs.versao }}
         body: "${{ env.NOTAS }}"
-        commit: main
         draft: false
         prerelease: false
         token: ${{ secrets.VRPACKAGETOKEN }}
