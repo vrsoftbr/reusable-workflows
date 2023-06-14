@@ -32,9 +32,13 @@ jobs:
     - name: Echos & set ENV branch
       id: set_env_branch
       run: |
+        BRANCH=${GITHUB_REF##*/}
         echo "Versao:" ${{ inputs.versao }}
         echo "Branch:" ${GITHUB_REF##*/} 
+        echo "Branch Atual: $BRANCH"
         echo "branch=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+        echo "branch_atual=$BRANCH" >> $GITHUB_ENV
+        echo "env-branch: ${{ env.branch_atual }}"
 
     - name: Generate Changelog Content
       run: |
@@ -172,7 +176,7 @@ jobs:
         name: ${{ inputs.versao }}
         tag: v${{ inputs.versao }}
         body: "${{ env.NOTAS }}"
-        commit: ${{ needs.create-release.outputs.branch }}
+        commit: "${{ env.branch_atual }}"
         draft: false
         prerelease: false
         token: ${{ secrets.VRPACKAGETOKEN }}
