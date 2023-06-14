@@ -29,7 +29,7 @@ jobs:
         echo "urlChatWebHooks:" ${{ inputs.urlChatWebHooks }}
 
     - name: Notify Problem
-      if: inputs.problem == true
+      if: inputs.problem == true && inputs.commit == true
       run: |
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         --header 'Content-Type: application/json' \
@@ -157,7 +157,7 @@ jobs:
           }'
 
     - name: Notify Unnecessary
-      if: inputs.problem == false && inputs.commit == false
+      if: inputs.commit == false
       run: |
         curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         --header 'Content-Type: application/json' \
