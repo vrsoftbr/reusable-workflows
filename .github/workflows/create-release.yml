@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       status: ${{ job.status }}
-      branch: ${{ steps.set_env_branch.outputs.branch }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -30,15 +29,10 @@ jobs:
         fetch-depth: 0
     
     - name: Echos & set ENV branch
-      id: set_env_branch
       run: |
         BRANCH=${GITHUB_REF##*/}
         echo "Versao:" ${{ inputs.versao }}
-        echo "Branch:" ${GITHUB_REF##*/} 
-        echo "Branch Atual: $BRANCH"
-        echo "branch=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
         echo "branch_atual=$BRANCH" >> $GITHUB_ENV
-        echo "env-branch: ${{ env.branch_atual }}"
 
     - name: Generate Changelog Content
       run: |
