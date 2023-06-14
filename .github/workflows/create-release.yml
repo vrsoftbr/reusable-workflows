@@ -172,7 +172,7 @@ jobs:
         name: ${{ inputs.versao }}
         tag: v${{ inputs.versao }}
         body: "${{ env.NOTAS }}"
-        commit: ${{ needs.create-release.outputs.branch }}
+        commit: INV-883
         draft: false
         prerelease: false
         token: ${{ secrets.VRPACKAGETOKEN }}
