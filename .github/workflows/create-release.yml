@@ -167,6 +167,7 @@ jobs:
         name: ${{ inputs.versao }}
         tag: v${{ inputs.versao }}
         body: "${{ env.NOTAS }}"
+        commit: ${GITHUB_REF##*/}
         draft: false
         prerelease: false
         token: ${{ secrets.VRPACKAGETOKEN }}
