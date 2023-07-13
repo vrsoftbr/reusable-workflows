@@ -68,6 +68,6 @@ jobs:
         uses: actions/cache/save@v3
         with:
           path: |
-            ~/ ${{inputs.main-project}}
-            ~/ ${{ inputs.child-project }}
+            ${{inputs.main-project}}
+            ${{ inputs.child-project }}
           key: ${{ runner.os }}-projects
