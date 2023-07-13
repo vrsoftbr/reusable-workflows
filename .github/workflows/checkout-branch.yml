@@ -17,6 +17,9 @@ on:
         description: 'Branch name of the main project that will be used for checkout in the child project'
         required: true
         type: string
+        
+    outputs:
+        status: ${{ job.status}}
 
     secrets:
       VRPACKAGETOKEN:
