@@ -1,4 +1,4 @@
-name: Checkout-VRFramework
+name: Checkout-Branch
 
 on:
   workflow_call:
@@ -40,9 +40,9 @@ jobs:
     - name: "Checkout ${{ inputs.main-project }} Branch"
       run: |
         cd ${{ inputs.child-project }}
-        branchLocal=$(git ls-remote --heads origin ${{ steps.get_branch.outputs.branch }});
+        branchLocal=$(git ls-remote --heads origin ${{ inputs.main-project-branch-name }});
         if ! [ -z "$branchLocal" ]; then
-                  branch=${{ steps.get_branch.outputs.branch }}
+                  branch=${{ inputs.main-project-branch-name }}
                   pwd
           else
                   cd ../${{ inputs.main-project }}
