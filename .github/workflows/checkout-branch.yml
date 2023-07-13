@@ -25,10 +25,12 @@ on:
 
 jobs:
   checkout-branch:
+    name: checkout branch
+
+    runs-on: ubuntu-latest
+    
     outputs:
       status: ${{ job.status}}
-    
-    runs-on: ubuntu-latest   
     
     steps:
       - uses: actions/checkout@v3
@@ -43,23 +45,23 @@ jobs:
           token: ${{ secrets.VRPACKAGETOKEN }}
           fetch-depth: 0
 
-    - name: "Checkout ${{ inputs.main-project }} Branch"
-      run: |
-        cd ${{ inputs.child-project }}
-        branchLocal=$(git ls-remote --heads origin ${{ inputs.main-project-branch-name }});
-        if ! [ -z "$branchLocal" ]; then
-                  branch=${{ inputs.main-project-branch-name }}
-                  pwd
-          else
-                  cd ../${{ inputs.main-project }}
-                  pwd
-                  branch=$(git show-branch -a \
-                  | grep '\*' \
-                  | grep -v `git rev-parse --abbrev-ref HEAD` \
-                  | head -n1 \
-                  | sed 's/.*\[\(.*\)\].*/\1/' \
-                  | sed 's/[\^~].*//') 
-          fi
-          echo $branch;
-          cd ../${{ inputs.child-project }}
-          git checkout $branch;
+      - name: "Checkout ${{ inputs.main-project }} Branch"
+        run: |
+          cd ${{ inputs.child-project }}
+          branchLocal=$(git ls-remote --heads origin ${{ inputs.main-project-branch-name }});
+          if ! [ -z "$branchLocal" ]; then
+                    branch=${{ inputs.main-project-branch-name }}
+                    pwd
+            else
+                    cd ../${{ inputs.main-project }}
+                    pwd
+                    branch=$(git show-branch -a \
+                    | grep '\*' \
+                    | grep -v `git rev-parse --abbrev-ref HEAD` \
+                    | head -n1 \
+                    | sed 's/.*\[\(.*\)\].*/\1/' \
+                    | sed 's/[\^~].*//') 
+            fi
+            echo $branch;
+            cd ../${{ inputs.child-project }}
+            git checkout $branch;
