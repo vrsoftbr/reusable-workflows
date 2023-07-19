@@ -3,13 +3,8 @@ name: Checkout-Branch
 on:
   workflow_call:
     inputs:
-      main-project:
-        description: 'Main project name that requires another project'
-        required: true
-        type: string
-
-      child-project:
-        description: 'Name of the child project to be checkout from the branch'
+      project-name:
+        description: 'Name of the project to be checkout from the branch'
         required: true
         type: string
 
@@ -24,50 +19,32 @@ jobs:
     runs-on: ubuntu-latest
     
     outputs:
-      status: ${{ job.status}}
+      status: ${{ job.status }}
     
     steps:
-      - name: Get Branch Name
-        id: get_branch
-        run: echo "##[set-output name=branch;]$(echo ${{ github.head_ref }})"
-
-      - uses: actions/checkout@v3
+      - name: clone ${{ inputs.project-name }}
+        uses: actions/checkout@v3
         with:
-          path: ${{ inputs.main-project }}
-          token: ${{ secrets.VRPACKAGETOKEN }}  
-          fetch-depth: 0
-
-      - uses: actions/checkout@v3
-        with:
-          path: ${{ inputs.child-project }}
+          path: ${{ inputs.project-name }}
           token: ${{ secrets.VRPACKAGETOKEN }}
           fetch-depth: 0
 
-      - name: "Checkout ${{ inputs.child-project }} Branch"
+      - name: "Checkout ${{ inputs.project-name }} Branch"
         run: |
-          cd ${{ inputs.child-project }}
-          branchLocal=$(git ls-remote --heads origin ${{ steps.get_branch.outputs.branch }});
+          cd ${{ inputs.project-name }}
+          branchLocal=$(git ls-remote --heads origin ${{ github.event.pull_request.head.ref }});
           if ! [ -z "$branchLocal" ]; then
-                    branch=${{ steps.get_branch.outputs.branch }}
-                    pwd
+                    branch=${{ github.event.pull_request.head.ref }}
             else
-                    cd ../${{ inputs.main-project }}
-                    pwd
-                    branch=$(git show-branch -a \
-                    | grep '\*' \
-                    | grep -v `git rev-parse --abbrev-ref HEAD` \
-                    | head -n1 \
-                    | sed 's/.*\[\(.*\)\].*/\1/' \
-                    | sed 's/[\^~].*//') 
+                    branch=${{ github.event.pull_request.base.ref }} 
             fi
             echo $branch;
-            cd ../${{ inputs.child-project }}
+            cd ../${{ inputs.project-name }}
             git checkout $branch;
 
-      - name: Caching projects 
+      - name: Caching ${{ inputs.project-name }} 
         uses: actions/cache/save@v3
         with:
           path: |
-            ${{inputs.main-project}}
-            ${{ inputs.child-project }}
-          key: ${{ runner.os }}-projects
+            ${{ inputs.project-name }}
+          key: ${{ inputs.project-name }}-${{ github.sha }}
