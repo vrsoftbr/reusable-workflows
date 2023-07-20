@@ -25,6 +25,7 @@ jobs:
       - name: clone ${{ inputs.project-name }}
         uses: actions/checkout@v3
         with:
+          ref: ${{ github.sha }}
           path: ${{ inputs.project-name }}
           token: ${{ secrets.VRPACKAGETOKEN }}
           fetch-depth: 0
