@@ -49,7 +49,7 @@ jobs:
         run: |
           FIRST_TAG=$([ -z "$(git tag)" ] && echo "true" || echo "false")
           COMMIT_COUNT=$([ "$FIRST_TAG" == true ] && echo "999" || echo "$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)")
-          COMMIT_EXIST=${{needs.check_commit_by_pass.outputs.verify_commit_exist}}
+          COMMIT_EXIST=${{steps.check_commit_by_pass.outputs.verify_commit_exist}}
           echo "Commits since last tag: $COMMIT_COUNT"
           echo "Has commits since last tag: $COMMIT_EXIST"
           echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
