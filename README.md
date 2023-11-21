@@ -9,6 +9,10 @@ Utilizada para verificar a quantidade de commits que houveram na branch main, de
 
 - `VRPACKAGETOKEN` token de usuário do GitHub **[obrigatório]**
 
+### Inputs:
+
+- `byPass` força um retorno `true` no output `exist`. Não afeta o output `count`
+
 ### Outputs:
 
 - `count` retorna um Integer com a quantidade de commits na branch main, desde a ultima tag/release criada
