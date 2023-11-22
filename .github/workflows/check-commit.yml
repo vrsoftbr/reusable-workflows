@@ -40,7 +40,7 @@ jobs:
       - name: Check Commit Exist by pass
         id: check_commit_by_pass
         run: |
-          VERIFY_COMMIT_EXIST=$([ inputs.byPass commits since last tagass == true ] && echo "true" || ([ "$COMMIT_COUNT" == 0 ] && echo "false" || echo "true"))
+          VERIFY_COMMIT_EXIST=$([ inputs.byPass == true ] && echo "true" || ([ "$COMMIT_COUNT" == 0 ] && echo "false" || echo "true"))
           echo "Verify commit exist: $VERIFY_COMMIT_EXIST"
           echo "verify_commit_exist=$VERIFY_COMMIT_EXIST" >> $GITHUB_OUTPUT
       
