@@ -180,6 +180,6 @@ jobs:
         echo "Release de Versão" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
         echo "- Versão: ${{ inputs.versao }}" >> $GITHUB_STEP_SUMMARY
-        echo "- [Release](https://github.com/${{ GITHUB_REPOSITORY }})" >> $GITHUB_STEP_SUMMARY
-        echo "- [DockerHub](https://github.com/${{ GITHUB_REPOSITORY }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Release](https://github.com/$GITHUB_REPOSITORY)" >> $GITHUB_STEP_SUMMARY
+        echo "- [DockerHub](https://github.com/$GITHUB_REPOSITORY)" >> $GITHUB_STEP_SUMMARY
     
