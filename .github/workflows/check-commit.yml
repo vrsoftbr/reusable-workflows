@@ -52,7 +52,7 @@ jobs:
         run: |
           FIRST_TAG=$([ -z "$(git tag)" ] && echo "true" || echo "false")
           COMMIT_COUNT=$([ "$FIRST_TAG" == true ] && echo "999" || echo "$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)")
-          COMMIT_EXIST=$([ ${{ toJSON(inputs.byPass) == true ] && echo "true" || ([ "$COMMIT_COUNT" == 0 ] && echo "false" || echo "true"))        
+          COMMIT_EXIST=$([ ${{ toJSON(inputs.byPass) }} == true ] && echo "true" || ([ "$COMMIT_COUNT" == 0 ] && echo "false" || echo "true"))        
           echo "ByPass: ${{ toJSON(inputs.byPass) }}"
           echo "Commits since last tag: $COMMIT_COUNT"
           echo "Has commits since last tag: $COMMIT_EXIST"
