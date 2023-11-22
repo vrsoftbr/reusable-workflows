@@ -182,5 +182,5 @@ jobs:
         echo "## Release Versão: ${{ inputs.versao }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
         echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases)" >> $GITHUB_STEP_SUMMARY
-        echo "- [DockerHub](https://hub.docker.com/repository/docker/teste/general)" >> $GITHUB_STEP_SUMMARY
+        echo "- [DockerHub](https://hub.docker.com/repository/docker/$DOCKER_HUB_NAME/general)" >> $GITHUB_STEP_SUMMARY
     
