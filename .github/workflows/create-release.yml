@@ -177,7 +177,7 @@ jobs:
 
     - name: Set Summary
       run: |
-        DOCKER_HUB_NAME=$(echo "${GITHUB_REPOSITORY,,})
+        DOCKER_HUB_NAME=$(echo "${GITHUB_REPOSITORY,,}")
         echo "$DOCKER_HUB_NAME"
         echo "## Release Versão: ${{ inputs.versao }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
