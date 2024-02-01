@@ -92,7 +92,7 @@ jobs:
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
           docker login ${{ secrets.VRDOCKERLOGIN }}
-          docker run -P --name bancovr -p 5437:5432 -v .:/bkp -d vrsoftbr/postgres
+          docker run -P --name bancovr -p 5432:5432 -v .:/bkp -d vrsoftbr/postgres
       
       - name: Restore Backup
         run: |
