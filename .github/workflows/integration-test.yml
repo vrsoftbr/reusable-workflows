@@ -96,16 +96,16 @@ jobs:
           cat /vr/vr.properties
 
       - name: Download backup
-        id: cache-primes-restore
+        id:  download-backup
         uses: actions/cache/restore@v4
         with:
-          path: updated_database.tar
+          path: ./db/updated_database.tar
           key: ${{ github.run_number }}
       
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
           docker login ${{ secrets.VRDOCKERLOGIN }}
-          docker run -P --name bancovr -p 5432:5432 -d -v updated_database.tar:/bkp/ vrsoftbr/postgres
+          docker run -P --name bancovr -p 5432:5432 -d -v ./db:/bkp/ vrsoftbr/postgres
       
       - name: Restore Backup
         run: docker exec bancovr pg_restore -U postgres -d vr /bkp/updated_database.tar
