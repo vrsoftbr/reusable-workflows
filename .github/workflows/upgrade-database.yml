@@ -88,12 +88,13 @@ jobs:
           echo "system.numeroloja=1" >> /vr/vr.properties
           
           cat /vr/vr.properties
-      
+
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
+          sudo mkdir /db
           docker login ${{ secrets.VRDOCKERLOGIN }}
-          docker run -P --name bancovr -p 5432:5432 -v .:/bkp -d vrsoftbr/postgres
-      
+          docker run -P --name bancovr -p 5432:5432 -v ./db:/bkp -d vrsoftbr/postgres
+
       - name: Restore Backup
         run: |
           sleep 10
@@ -108,11 +109,11 @@ jobs:
 
       - name: Generate backup
         run: |
-          docker exec bancovr pg_dump -Fc -U postgres vr -f /bkp/updated_database.tar 
+          docker exec bancovr pg_dump -Fc -U postgres vr -f /bkp/updated_database.bak 
 
       - name: Upload backup
         id: upload-cache
         uses: actions/cache/save@v4
         with:
-          path: updated_database.tar
+          path: ./db/updated_database.bak
           key: ${{ github.run_number }}

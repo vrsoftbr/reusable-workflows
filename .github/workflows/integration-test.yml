@@ -95,11 +95,15 @@ jobs:
           
           cat /vr/vr.properties
 
+      - name: Creating folder to backup
+        run: |
+          sudo mkdir /db
+
       - name: Download backup
         id:  download-backup
         uses: actions/cache/restore@v4
         with:
-          path: ./db/updated_database.tar
+          path: ./db/updated_database.bak
           key: ${{ github.run_number }}
       
       - name: Run Docker Container from vrsoftbr/postgres
@@ -108,7 +112,7 @@ jobs:
           docker run -P --name bancovr -p 5432:5432 -d -v ./db:/bkp/ vrsoftbr/postgres
       
       - name: Restore Backup
-        run: docker exec bancovr pg_restore -U postgres -d vr /bkp/updated_database.tar
+        run: docker exec bancovr pg_restore -U postgres -d vr /bkp/updated_database.bak
 
       - name: executing ${{ inputs.task-name }}
         run: |
