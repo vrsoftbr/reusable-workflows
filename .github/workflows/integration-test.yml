@@ -118,6 +118,7 @@ jobs:
       
       - name: Restore Backup
         run: |
+          sleep 10
           docker cp ./db/updated_database.bak bancovr:/tmp/database.bkp
           docker exec bancovr restore_db
  
