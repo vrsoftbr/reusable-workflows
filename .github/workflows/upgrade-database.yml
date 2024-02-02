@@ -111,6 +111,11 @@ jobs:
         run: |
           docker exec bancovr pg_dump -Fc -U postgres vr -f /bkp/updated_database.bak 
 
+      - name: test
+        run: |
+          cd ./db
+          ls -l
+
       - name: Upload backup
         id: upload-cache
         uses: actions/cache/save@v4
