@@ -113,7 +113,7 @@ jobs:
       
       - name: Restore Backup
         run: |
-          docker cp ./db/updated_database.bak bancovr:/tmp/updated_database.bak
+          docker cp ./db/updated_database.bak bancovr:/tmp/database.bkp
           docker exec bancovr pg_restore -U postgres -d vr /tmp/updated_database.bak
  
       - name: executing ${{ inputs.task-name }}
