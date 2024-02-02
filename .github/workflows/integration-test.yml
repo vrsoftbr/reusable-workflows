@@ -115,7 +115,7 @@ jobs:
         run: |
           docker cp ./db/updated_database.bak bancovr:/tmp/updated_database.bak
           docker exec bancovr pg_restore -U postgres -d vr /tmp/updated_database.bak
-
+ 
       - name: executing ${{ inputs.task-name }}
         run: |
           cd VRCore && ./gradlew ${{ inputs.task-name }} -x VRNFe:integrationTest
