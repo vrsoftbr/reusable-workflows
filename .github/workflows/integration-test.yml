@@ -116,6 +116,17 @@ jobs:
           sleep 10
           docker cp ./db/updated_database.bak bancovr:/tmp/database.bkp
           docker exec bancovr restore_db
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 8
+      
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v3
+        with: 
+          cache-overwrite-existing: true
+          cache-read-only: true
  
       - name: executing ${{ inputs.task-name }}
         run: |
