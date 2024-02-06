@@ -117,16 +117,22 @@ jobs:
           docker cp ./db/updated_database.bak bancovr:/tmp/database.bkp
           docker exec bancovr restore_db
 
+      - name: restore Gradle-cache 
+        uses: actions/cache/restore@v3
+        id: restore-cache
+        with:
+          path: |
+            ~/.gradle/
+            ./VRCore/.gradle
+            ./VRFramework/.gradle
+            ./VRNFe/.gradle
+            ~/.m2/
+          key: gradle-${{ github.run_number }}
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 8
-      
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
-        with: 
-          cache-overwrite-existing: true
-          cache-read-only: true
  
       - name: executing ${{ inputs.task-name }}
         run: |
