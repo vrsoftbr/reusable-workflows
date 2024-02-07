@@ -145,6 +145,6 @@ jobs:
         uses: actions/upload-artifact@v2
         if: ${{ always() }}
         with:
-          name: integrationTestReport
+          name: ${{ inputs.task-name }}Report
           path: VRCore/build/reports/tests/${{ inputs.task-name }}
           retention-days: 2
