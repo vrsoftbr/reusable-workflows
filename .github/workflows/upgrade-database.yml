@@ -50,6 +50,7 @@ jobs:
             fi
             echo $branch;
             git checkout $branch;
+
       - name: Clone VRWorkflow
         uses: actions/checkout@v3
         with:
@@ -69,6 +70,7 @@ jobs:
             fi
             echo $branch;
             git checkout $branch;
+
       - name: Clone VRCore
         uses: actions/checkout@v3
         with:
@@ -110,7 +112,7 @@ jobs:
             ./VRFramework/.gradle
             ./VRNFe/.gradle
             ~/.m2/
-          key: gradle-${{ github.run_number }}
+          key: gradle-${{ github.run_number }}${{ github.run_attempt }}
 
       - uses: actions/setup-java@v4
         with:
@@ -133,4 +135,4 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ./db/updated_database.bak
-          key: ${{ github.run_number }}
+          key: database-${{ github.run_number }}${{ github.run_attempt }}

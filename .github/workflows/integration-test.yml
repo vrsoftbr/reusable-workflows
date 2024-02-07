@@ -104,7 +104,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ./db/updated_database.bak
-          key: ${{ github.run_number }}
+          key: database-${{ github.run_number }}${{ github.run_attempt }}
       
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
@@ -127,7 +127,7 @@ jobs:
             ./VRFramework/.gradle
             ./VRNFe/.gradle
             ~/.m2/
-          key: gradle-${{ github.run_number }}
+          key: gradle-${{ github.run_number }}${{ github.run_attempt }}
 
       - uses: actions/setup-java@v4
         with:
