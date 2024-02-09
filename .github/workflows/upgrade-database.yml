@@ -8,7 +8,7 @@ on:
 
 jobs:
   upgrade-database:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
 
     steps:
       - name: Clone VRFramework
