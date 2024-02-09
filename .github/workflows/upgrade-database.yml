@@ -8,7 +8,7 @@ on:
 
 jobs:
   upgrade-database:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, linux, fis1, fis2, fis3, fis4]
 
     steps:
       - name: Run Docker Container from vrsoftbr/postgres

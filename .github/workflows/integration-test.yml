@@ -14,7 +14,7 @@ on:
 
 jobs:
   integration-test:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, linux, fis1, fis2, fis3, fis4]
 
     steps:
       - uses: actions/setup-java@v4
