@@ -8,13 +8,18 @@ on:
         required: true
         type: string
 
+      run-label:
+        description: 'Name of the github runner'
+        required: true
+        type: string
+
     secrets:
       VRPACKAGETOKEN:
         required: true
 
 jobs:
   integration-test:
-    runs-on: [self-hosted, linux, fis1, fis2, fis3, fis4]
+    runs-on: ${{ inputs.run-label }}
 
     steps:
       - uses: actions/setup-java@v4
