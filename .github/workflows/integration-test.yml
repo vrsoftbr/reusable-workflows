@@ -8,7 +8,7 @@ on:
         required: true
         type: string
 
-      run-label:
+      run-group:
         description: 'Name of the github runner'
         required: true
         type: string
@@ -19,7 +19,8 @@ on:
 
 jobs:
   integration-test:
-    runs-on: ["${{ inputs.run-label }}"]
+    runs-on: 
+      group: ${{ inputs.run-group }}
 
     steps:
       - uses: actions/setup-java@v4

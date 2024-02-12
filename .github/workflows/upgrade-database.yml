@@ -3,7 +3,7 @@ name: Upgrade-database
 on:
   workflow_call:
     inputs:
-      run-label:
+      run-group:
         description: 'Name of the github runner'
         required: true
         type: string
@@ -14,12 +14,12 @@ on:
 
 jobs:
   upgrade-database:
-    runs-on: ["${{ inputs.run-label }}"]
+    runs-on: 
+      group: ${{ inputs.run-group }}
 
     steps:
-      - name: Run Docker Container from vrsoftbr/postgres
+      - name: Create Docker Container from vrsoftbr/postgres
         run: |
-          docker login ${{ secrets.VRDOCKERLOGIN }}
           docker run -P --name bancovr -p 5432:5432 -v ./db:/bkp -d vrsoftbr/postgres
 
       - name: Restore Backup
