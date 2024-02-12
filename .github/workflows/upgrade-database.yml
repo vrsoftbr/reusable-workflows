@@ -2,18 +2,23 @@ name: Upgrade-database
 
 on:
   workflow_call:
+    inputs:
+      run-label:
+        description: 'Name of the github runner'
+        required: true
+        type: string
+
     secrets:
       VRPACKAGETOKEN:
         required: true
 
 jobs:
   upgrade-database:
-    runs-on: [fis1]
+    runs-on: ["${{ inputs.run-label }}"]
 
     steps:
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
-          sudo mkdir -p /db
           docker login ${{ secrets.VRDOCKERLOGIN }}
           docker run -P --name bancovr -p 5432:5432 -v ./db:/bkp -d vrsoftbr/postgres
 

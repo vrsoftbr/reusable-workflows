@@ -19,7 +19,7 @@ on:
 
 jobs:
   integration-test:
-    runs-on: ${{ inputs.run-label }}
+    runs-on: ["${{ inputs.run-label }}"]
 
     steps:
       - uses: actions/setup-java@v4
