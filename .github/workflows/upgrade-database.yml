@@ -106,7 +106,8 @@ jobs:
 
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
-          sudo mkdir /db
+          sudo rm -f ./db
+          sudo mkdir ./db
           docker login ${{ secrets.VRDOCKERLOGIN }}
           docker run -P --name bancovr -p 5432:5432 -v ./db:/bkp -d vrsoftbr/postgres
 
