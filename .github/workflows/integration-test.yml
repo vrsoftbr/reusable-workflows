@@ -97,7 +97,7 @@ jobs:
       - name: Creating vr.properties
         if: steps.check_files.outputs.files_exists == 'false'
         run: |
-          sudo mkdir /vr
+          sudo mkdir -p /vr
           sudo chown -R $USER /vr
           touch /vr/vr.properties
           echo "database.ip=localhost" >> /vr/vr.properties
@@ -112,7 +112,7 @@ jobs:
       - name: Creating folder to backup
         run: |
           sudo mkdir /db
-          
+
       - name: Download backup
         id:  download-backup
         uses: actions/cache/restore@v4
