@@ -108,7 +108,7 @@ jobs:
         run: |
           sudo rm -rf ./db
           sudo mkdir ./db
-          docker login ${{ secrets.VRDOCKERLOGIN }}
+          docker rm -f bancovr
           docker run -P --name bancovr -p 5432:5432 -v ./db:/bkp -d vrsoftbr/postgres
 
       - name: Restore Backup
