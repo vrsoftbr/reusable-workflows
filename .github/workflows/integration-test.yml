@@ -111,7 +111,9 @@ jobs:
 
       - name: Creating folder to backup
         run: |
+          sudo rm -rf /db
           sudo mkdir /db
+          sleep 5
 
       - name: Download backup
         id:  download-backup
@@ -122,7 +124,7 @@ jobs:
 
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
-          docker run rm -f bancovr
+          docker rm -f bancovr
           docker run -P --name bancovr -p 5432:5432 -d vrsoftbr/postgres
       
       - name: Restore Backup
