@@ -152,7 +152,7 @@ jobs:
           path: ./db/updated_database.bak
           key: database-${{ github.run_number }}${{ github.run_attempt }}
 
-      - name: Shutdown container
-        run: |
-          docker stop bancovr
-          docker rm -f bancovr
+      # - name: Shutdown container
+      #   run: |
+      #     docker stop bancovr
+      #     docker rm -f bancovr

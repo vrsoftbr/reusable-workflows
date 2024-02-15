@@ -115,24 +115,24 @@ jobs:
           sudo mkdir /db
           sleep 5
 
-      - name: Download backup
-        id:  download-backup
-        uses: actions/cache/restore@v4
-        with:
-          path: ./db/updated_database.bak
-          key: database-${{ github.run_number }}${{ github.run_attempt }}
+      # - name: Download backup
+      #   id:  download-backup
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: ./db/updated_database.bak
+      #     key: database-${{ github.run_number }}${{ github.run_attempt }}
 
-      - name: Run Docker Container from vrsoftbr/postgres
-        run: |
-          docker rm -f bancovr
-          sleep 10
-          docker run -P --name bancovr -p 5432:5432 -d vrsoftbr/postgres
+      # - name: Run Docker Container from vrsoftbr/postgres
+      #   run: |
+      #     docker rm -f bancovr
+      #     sleep 10
+      #     docker run -P --name bancovr -p 5432:5432 -d vrsoftbr/postgres
       
-      - name: Restore Backup
-        run: |
-          sleep 10
-          docker cp ./db/updated_database.bak bancovr:/tmp/database.bkp
-          docker exec bancovr restore_db
+      # - name: Restore Backup
+      #   run: |
+      #     sleep 10
+      #     docker cp ./db/updated_database.bak bancovr:/tmp/database.bkp
+      #     docker exec bancovr restore_db
 
       - name: restore Gradle-cache 
         uses: actions/cache/restore@v3
@@ -166,7 +166,7 @@ jobs:
           path: VRCore/build/reports/tests/${{ inputs.task-name }}
           retention-days: 2
     
-      - name: Shutdown container
-        run: |
-          docker stop bancovr
-          docker rm -f bancovr
+      # - name: Shutdown container
+      #   run: |
+      #     docker stop bancovr
+      #     docker rm -f bancovr
