@@ -125,6 +125,7 @@ jobs:
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
           docker rm -f bancovr
+          sleep 10
           docker run -P --name bancovr -p 5432:5432 -d vrsoftbr/postgres
       
       - name: Restore Backup
