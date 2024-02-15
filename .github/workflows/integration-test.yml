@@ -164,3 +164,8 @@ jobs:
           name: ${{ inputs.task-name }}Report
           path: VRCore/build/reports/tests/${{ inputs.task-name }}
           retention-days: 2
+    
+      - name: Shutdown container
+        run: |
+          docker stop bancovr
+          docker rm -f bancovr
