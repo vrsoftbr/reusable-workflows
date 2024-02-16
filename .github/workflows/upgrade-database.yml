@@ -83,14 +83,14 @@ jobs:
           path: VRCore
           fetch-depth: 0
 
-      - name: Check vr.properties existence
-        id: check_files
+      - name: Check vr.properties file existence
+        id: check_vrproperties
         uses: andstor/file-existence-action@v3
         with:
           files: './vr/vr.properties'
 
       - name: Creating vr.properties
-        if: steps.check_files.outputs.files_exists == 'false'
+        if: steps.check_vrproperties.outputs.files_exists == 'false'
         run: |
           sudo mkdir -p /vr
           sudo chown -R $USER /vr
@@ -104,18 +104,32 @@ jobs:
           
           cat /vr/vr.properties
 
+      - name: Check .env file existence
+        id: check_env
+        uses: andstor/file-existence-action@v3
+        with:
+          files: '.env'
+
+      - name: Creating .env file
+        if: steps.check_env.outputs.files_exists == 'false'
+        run: |
+          sudo touch .env
+          echo "IMAGE=postgres:13-alpine" >> .env
+          echo "PASSWORD=VrPost@Server" >> .env
+          echo "USER=postgres" >> .env
+          echo "PORT=5432" >> .env
+          echo "PATH_CONFIG_FILE=./docker/config/postgresql.conf" >> .env
+          echo "PATH_BACKUP=./docker/bkp" >> .env
+          echo "BACKUP_FILE_NAME=database.bkp" >> .env
+          echo "PATH_INITIALIZATION_SCRIPTS=./docker/scripts/" >> .env
+          
+          cat .env
+
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
-          sudo rm -rf ./db
-          sudo mkdir ./db
-          docker rm -f bancovr
+          docker-compose -f ./docker-compose.test.yml down
+          docker-compose -f ./docker-compose.test.yml up -d
           sleep 10
-          docker run -P --name bancovr -p 5432:5432 -v ./db:/bkp -d vrsoftbr/postgres
-
-      - name: Restore Backup
-        run: |
-          sleep 10
-          docker exec bancovr restore_db
 
       - name: restore Gradle-cache 
         uses: actions/cache/restore@v3
