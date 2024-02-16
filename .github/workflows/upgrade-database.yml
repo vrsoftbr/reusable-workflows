@@ -77,6 +77,19 @@ jobs:
             echo $branch;
             git checkout $branch;
 
+      - name: Check VRCore path existence
+        id: check_vrcore
+        uses: andstor/file-existence-action@v3
+        with:
+          files: './VRCore'
+
+      - name: Drop docker volume
+        if: steps.check_vrcore.outputs.file_exists == 'true'
+        run: |
+          cd VRCore
+          docker compose -f ./docker-compose.test.yml down -v
+          sleep 10
+
       - name: Clone VRCore
         uses: actions/checkout@v3
         with:

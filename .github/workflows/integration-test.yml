@@ -22,12 +22,6 @@ jobs:
     runs-on: 
       group: ${{ inputs.run-group }}
     steps:
-      - name: Drop docker volume
-        run: |
-          cd VRCore
-          docker compose -f ./docker-compose.test.yml down -v
-          sleep 10
-
       - name: Clone VRFramework
         uses: actions/checkout@v3
         with:
