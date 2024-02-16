@@ -96,7 +96,7 @@ jobs:
           sudo chown -R $USER /vr
           touch /vr/vr.properties
           echo "database.ip=localhost" >> /vr/vr.properties
-          echo "database.porta=5432" >> /vr/vr.properties
+          echo "database.porta=5433" >> /vr/vr.properties
           echo "database.nome=vr" >> /vr/vr.properties
           echo "database.usuario=postgres" >> /vr/vr.properties
           echo "database.senha=VrPost@Server" >> /vr/vr.properties
@@ -118,7 +118,7 @@ jobs:
           echo "IMAGE=postgres:13-alpine" >> .env
           echo "PASSWORD=VrPost@Server" >> .env
           echo "USER=postgres" >> .env
-          echo "PORT=5432" >> .env
+          echo "PORT=5433" >> .env
           echo "PATH_CONFIG_FILE=./docker/config/postgresql.conf" >> .env
           echo "PATH_BACKUP=./docker/bkp" >> .env
           echo "BACKUP_FILE_NAME=database.bkp" >> .env
