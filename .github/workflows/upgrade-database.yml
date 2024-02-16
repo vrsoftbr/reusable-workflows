@@ -113,7 +113,7 @@ jobs:
       - name: Creating .env file
         if: steps.check_env.outputs.files_exists == 'false'
         run: |
-          sudo touch .env
+          touch .env
           echo "IMAGE=postgres:13-alpine" >> .env
           echo "PASSWORD=VrPost@Server" >> .env
           echo "USER=postgres" >> .env
