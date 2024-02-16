@@ -108,11 +108,12 @@ jobs:
         id: check_env
         uses: andstor/file-existence-action@v3
         with:
-          files: '.env'
+          files: './VRCore/.env'
 
       - name: Creating .env file
         if: steps.check_env.outputs.files_exists == 'false'
         run: |
+          cd VRCore
           touch .env
           echo "IMAGE=postgres:13-alpine" >> .env
           echo "PASSWORD=VrPost@Server" >> .env
@@ -127,6 +128,7 @@ jobs:
 
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
+          cd VRCore
           docker compose -f ./docker-compose.test.yml down
           docker compose -f ./docker-compose.test.yml up -d
           sleep 10
