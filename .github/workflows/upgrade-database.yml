@@ -81,7 +81,7 @@ jobs:
         id: check_vrcore
         uses: andstor/file-existence-action@v3
         with:
-          files: './VRCore/.docker/bkp/database.bkp'
+          files: './VRCore/'
 
       - name: Drop docker volume
         if: steps.check_vrcore.outputs.files_exists == 'true'
