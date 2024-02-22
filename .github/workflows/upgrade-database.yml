@@ -1,0 +1,161 @@
+name: Upgrade-database
+
+on:
+  workflow_call:
+    inputs:
+      run-group:
+        description: 'Name of the github runner'
+        required: true
+        type: string
+
+    secrets:
+      VRPACKAGETOKEN:
+        required: true
+
+jobs:
+  upgrade-database:
+    runs-on: 
+      group: ${{ inputs.run-group }}
+    steps:
+      - name: Clone VRFramework
+        uses: actions/checkout@v3
+        with:
+          repository: vrsoftbr/VRFramework
+          path: VRFramework
+          token: ${{ secrets.VRPACKAGETOKEN }}
+          fetch-depth: 0
+
+      - name: "Checkout VRFramework Branch"
+        run: |
+          cd VRFramework
+          branchLocal=$(git ls-remote --heads origin ${{ github.event.pull_request.head.ref }});
+          if ! [ -z "$branchLocal" ]; then
+                    branch=${{ github.event.pull_request.head.ref }}
+            else
+                    branch=${{ github.event.pull_request.base.ref }} 
+            fi
+            echo $branch;
+            git checkout $branch;
+      
+      - name: Clone VRNFe
+        uses: actions/checkout@v3
+        with:
+          repository: vrsoftbr/VRNFe
+          path: VRNFe
+          token: ${{ secrets.VRPACKAGETOKEN }}
+          fetch-depth: 0
+
+      - name: "Checkout VRNFe Branch"
+        run: |
+          cd VRNFe
+          branchLocal=$(git ls-remote --heads origin ${{ github.event.pull_request.head.ref }});
+          if ! [ -z "$branchLocal" ]; then
+                    branch=${{ github.event.pull_request.head.ref }}
+            else
+                    branch=${{ github.event.pull_request.base.ref }} 
+            fi
+            echo $branch;
+            git checkout $branch;
+
+      - name: Clone VRWorkflow
+        uses: actions/checkout@v3
+        with:
+          repository: vrsoftbr/VRWorkflow
+          path: VRWorkflow
+          token: ${{ secrets.VRPACKAGETOKEN }}
+          fetch-depth: 0
+
+      - name: "Checkout VRWorkflow Branch"
+        run: |
+          cd VRWorkflow
+          branchLocal=$(git ls-remote --heads origin ${{ github.event.pull_request.head.ref }});
+          if ! [ -z "$branchLocal" ]; then
+                    branch=${{ github.event.pull_request.head.ref }}
+            else
+                    branch=${{ github.event.pull_request.base.ref }} 
+            fi
+            echo $branch;
+            git checkout $branch;
+
+      - name: clean-vrcore
+        run: |
+          sudo rm -rf /VRCore
+          sudo rm -rf /home/ubuntu/Java-GR-1/Java-runner-4/_work/VRCore/VRCore/VRCore
+
+      - name: Clone VRCore
+        uses: actions/checkout@v3
+        with:
+          path: VRCore
+          fetch-depth: 0
+
+      - name: Creating folder to backup
+        run: |
+          sudo rm -rf /db
+          sudo mkdir /db
+          sleep 5
+
+      - name: Check vr.properties file existence
+        id: check_vrproperties
+        uses: andstor/file-existence-action@v3
+        with:
+          files: './vr/vr.properties'
+
+      - name: Creating vr.properties
+        if: steps.check_vrproperties.outputs.files_exists == 'false'
+        run: |
+          sudo mkdir -p /vr
+          sudo chown -R $USER /vr
+          touch /vr/vr.properties
+          echo "database.ip=localhost" >> /vr/vr.properties
+          echo "database.porta=5433" >> /vr/vr.properties
+          echo "database.nome=vr" >> /vr/vr.properties
+          echo "database.usuario=postgres" >> /vr/vr.properties
+          echo "database.senha=VrPost@Server" >> /vr/vr.properties
+          echo "system.numeroloja=1" >> /vr/vr.properties
+          
+          cat /vr/vr.properties
+
+      - name: restore Gradle-cache 
+        uses: actions/cache/restore@v3
+        id: restore-cache
+        with:
+          path: |
+            ~/.gradle/
+            ./VRCore/.gradle
+            ./VRFramework/.gradle
+            ./VRNFe/.gradle
+            ~/.m2/
+          key: gradle-${{ github.run_number }}${{ github.run_attempt }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 8
+
+      - name: Run Docker Container from vrsoftbr/postgres
+        run: |
+          sleep 10
+          docker run -P --name bancovrdatabase -p 5433:5432 -v ./db:/bkp -d vrsoftbr/postgres
+          
+      - name: Upgrade database
+        run: |
+          cd VRCore && ./gradlew atualizarTabelas  database-260971
+        env:
+          USERNAME: ${{ github.actor }}
+          TOKEN: ${{ secrets.VRPACKAGETOKEN }}
+
+      - name: Generate backup
+        run: |
+          docker exec bancovrdatabase pg_dump -Fc -U postgres vr -f /bkp/updated_database.bak 
+
+      - name: Upload backup
+        id: upload-cache
+        uses: actions/cache/save@v4
+        with:
+          path: ./db/updated_database.bak
+          key: database-${{ github.run_number }}${{ github.run_attempt }}
+
+      - name: Shutdown container
+        run: |
+          docker stop bancovrdatabase
+          docker rm -f bancovrdatabase
