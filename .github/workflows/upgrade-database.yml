@@ -78,7 +78,9 @@ jobs:
             git checkout $branch;
 
       - name: clean-vrcore
-        run: sudo rm -rf /VRCore
+        run: |
+          sudo rm -rf /VRCore
+          sudo rm -rf /home/ubuntu/Java-GR-1/Java-runner-4/_work/VRCore/VRCore/VRCore
 
       - name: Clone VRCore
         uses: actions/checkout@v3
