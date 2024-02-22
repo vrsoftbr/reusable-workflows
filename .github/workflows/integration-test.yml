@@ -125,7 +125,6 @@ jobs:
 
       - name: Run Docker Container from vrsoftbr/postgres
         run: |
-          docker rm -f bancovr${{ inputs.database-port }}
           sleep 10
           docker run -P --name bancovr${{ inputs.database-port }} -p ${{ inputs.database-port }}:5432 -d vrsoftbr/postgres
       
