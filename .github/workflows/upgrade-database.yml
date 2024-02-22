@@ -81,8 +81,6 @@ jobs:
         run: |
           sudo rm -rf /VRCore
           sudo rm -rf /home/ubuntu/Java-GR-1/Java-runner-4/_work/VRCore/VRCore/VRCore
-          docker stop bancovrdatabase
-          docker rm -f bancovrdatabase
 
       - name: Clone VRCore
         uses: actions/checkout@v3
