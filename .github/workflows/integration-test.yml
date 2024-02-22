@@ -94,7 +94,7 @@ jobs:
           fetch-depth: 0
 
       - name: delete vr.properties
-        run: rm -rf /vr
+        run: sudo rm -rf /vr
 
       - name: Creating vr.properties
         run: |
