@@ -77,8 +77,10 @@ jobs:
             echo $branch;
             git checkout $branch;
 
-      - name: Shutdown container
+      - name: clean-vrcore
         run: |
+          sudo rm -rf /VRCore
+          sudo rm -rf /home/ubuntu/Java-GR-1/Java-runner-4/_work/VRCore/VRCore/VRCore
           docker stop bancovrdatabase
           docker rm -f bancovrdatabase
 
