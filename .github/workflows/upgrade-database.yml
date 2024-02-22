@@ -77,10 +77,10 @@ jobs:
             echo $branch;
             git checkout $branch;
 
-      - name: clean-vrcore
+      - name: Shutdown container
         run: |
-          sudo rm -rf /VRCore
-          sudo rm -rf /home/ubuntu/Java-GR-1/Java-runner-4/_work/VRCore/VRCore/VRCore
+          docker stop bancovrdatabase
+          docker rm -f bancovrdatabase
 
       - name: Clone VRCore
         uses: actions/checkout@v3
@@ -130,7 +130,7 @@ jobs:
         run: |
           docker rm -f bancovrdatabase
           sleep 10
-          docker run -P --name bancovrdatabase -p 5433:5432 -d vrsoftbr/postgres
+          docker run -P --name bancovrdatabase -p 5433:5432 -v ./db:/bkp -d vrsoftbr/postgres
           
       - name: Upgrade database
         run: |
@@ -149,3 +149,8 @@ jobs:
         with:
           path: ./db/updated_database.bak
           key: database-${{ github.run_number }}${{ github.run_attempt }}
+
+      - name: Shutdown container
+        run: |
+          docker stop bancovrdatabase
+          docker rm -f bancovrdatabase
