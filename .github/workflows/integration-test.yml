@@ -13,6 +13,11 @@ on:
         required: true
         type: string
 
+      database-port:
+        description: 'Database port number'
+        required: true
+        type: number
+
     secrets:
       VRPACKAGETOKEN:
         required: true
@@ -88,20 +93,16 @@ jobs:
           path: VRCore
           fetch-depth: 0
 
-      - name: Check vr.properties existence
-        id: check_files
-        uses: andstor/file-existence-action@v3
-        with:
-          files: './vr/vr.properties'
+      - name: delete vr.properties
+        run: rm -rf /vr
 
       - name: Creating vr.properties
-        if: steps.check_files.outputs.files_exists == 'false'
         run: |
           sudo mkdir -p /vr
           sudo chown -R $USER /vr
           touch /vr/vr.properties
           echo "database.ip=localhost" >> /vr/vr.properties
-          echo "database.porta=5432" >> /vr/vr.properties
+          echo "database.porta=${{ inputs.database-port }}" >> /vr/vr.properties
           echo "database.nome=vr" >> /vr/vr.properties
           echo "database.usuario=postgres" >> /vr/vr.properties
           echo "database.senha=VrPost@Server" >> /vr/vr.properties
@@ -115,24 +116,24 @@ jobs:
           sudo mkdir /db
           sleep 5
 
-      # - name: Download backup
-      #   id:  download-backup
-      #   uses: actions/cache/restore@v4
-      #   with:
-      #     path: ./db/updated_database.bak
-      #     key: database-${{ github.run_number }}${{ github.run_attempt }}
+      - name: Download backup
+        id:  download-backup
+        uses: actions/cache/restore@v4
+        with:
+          path: ./db/updated_database.bak
+          key: database-${{ github.run_number }}${{ github.run_attempt }}
 
-      # - name: Run Docker Container from vrsoftbr/postgres
-      #   run: |
-      #     docker rm -f bancovr
-      #     sleep 10
-      #     docker run -P --name bancovr -p 5432:5432 -d vrsoftbr/postgres
+      - name: Run Docker Container from vrsoftbr/postgres
+        run: |
+          docker rm -f bancovr${{ inputs.database-port }}
+          sleep 10
+          docker run -P --name bancovr${{ inputs.database-port }} -p ${{ inputs.database-port }}:5432 -d vrsoftbr/postgres
       
-      # - name: Restore Backup
-      #   run: |
-      #     sleep 10
-      #     docker cp ./db/updated_database.bak bancovr:/tmp/database.bkp
-      #     docker exec bancovr restore_db
+      - name: Restore Backup
+        run: |
+          sleep 10
+          docker cp ./db/updated_database.bak bancovr${{ inputs.database-port }}:/tmp/database.bkp
+          docker exec bancovr${{ inputs.database-port }} restore_db
 
       - name: restore Gradle-cache 
         uses: actions/cache/restore@v3
@@ -166,7 +167,7 @@ jobs:
           path: VRCore/build/reports/tests/${{ inputs.task-name }}
           retention-days: 2
     
-      # - name: Shutdown container
-      #   run: |
-      #     docker stop bancovr
-      #     docker rm -f bancovr
+      - name: Shutdown container
+        run: |
+          docker stop bancovr${{ inputs.database-port }}
+          docker rm -f bancovr${{ inputs.database-port }}

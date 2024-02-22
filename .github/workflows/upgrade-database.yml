@@ -77,23 +77,6 @@ jobs:
             echo $branch;
             git checkout $branch;
 
-      - name: Check bkp path existence
-        id: check_vrcore
-        uses: andstor/file-existence-action@v3
-        with:
-          files: './VRCore/'
-
-      - name: Drop docker volume
-        if: steps.check_vrcore.outputs.files_exists == 'true'
-        run: |
-          cd VRCore
-          docker compose -f ./docker-compose.test.yml down -v
-          sleep 10
-
-      # - name: Permission to bkp
-      #   if: steps.check_vrcore.outputs.files_exists == 'true'
-      #   run: sudo chown -R $USER ./VRCore/.docker
-
       - name: Clone VRCore
         uses: actions/checkout@v3
         with:
@@ -121,35 +104,6 @@ jobs:
           
           cat /vr/vr.properties
 
-      - name: Check .env file existence
-        id: check_env
-        uses: andstor/file-existence-action@v3
-        with:
-          files: './VRCore/.env'
-
-      - name: Creating .env file
-        if: steps.check_env.outputs.files_exists == 'false'
-        run: |
-          cd VRCore
-          touch .env
-          echo "IMAGE=postgres:13-alpine" >> .env
-          echo "PASSWORD=VrPost@Server" >> .env
-          echo "USER=postgres" >> .env
-          echo "PORT=5433" >> .env
-          echo "PATH_CONFIG_FILE=./docker/config/postgresql.conf" >> .env
-          echo "PATH_BACKUP=./docker/bkp" >> .env
-          echo "BACKUP_FILE_NAME=database.bkp" >> .env
-          echo "PATH_INITIALIZATION_SCRIPTS=./docker/scripts/" >> .env
-          
-          cat .env
-
-      - name: Run Docker Container from vrsoftbr/postgres
-        run: |
-          cd VRCore
-          docker compose -f ./docker-compose.test.yml down
-          docker compose -f ./docker-compose.test.yml up -d
-          sleep 10
-
       - name: restore Gradle-cache 
         uses: actions/cache/restore@v3
         id: restore-cache
@@ -166,6 +120,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 8
+
+      - name: Run Docker Container from vrsoftbr/postgres
+        run: |
+          docker rm -f bancovrdatabase
+          sleep 10
+          docker run -P --name bancovrdatabase -p 5433:5432 -d vrsoftbr/postgres
           
       - name: Upgrade database
         run: |
@@ -176,7 +136,7 @@ jobs:
 
       - name: Generate backup
         run: |
-          docker exec bancovr pg_dump -Fc -U postgres vr -f /bkp/updated_database.bak 
+          docker exec bancovrdatabase pg_dump -Fc -U postgres vr -f /bkp/updated_database.bak 
 
       - name: Upload backup
         id: upload-cache
@@ -185,7 +145,7 @@ jobs:
           path: ./db/updated_database.bak
           key: database-${{ github.run_number }}${{ github.run_attempt }}
 
-      # - name: Shutdown container
-      #   run: |
-      #     docker stop bancovr
-      #     docker rm -f bancovr
+      - name: Shutdown container
+        run: |
+          docker stop bancovrdatabase
+          docker rm -f bancovrdatabase
