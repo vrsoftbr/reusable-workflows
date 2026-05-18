@@ -21,27 +21,37 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Parse credentials and expose as env
+    - name: Setup OCI config from credentials
       shell: bash
       env:
         CREDS: ${{ inputs.credentials }}
       run: |
         set -euo pipefail
 
-        echo "OCI_CLI_USER=$(echo "$CREDS"        | jq -r .user)"        >> "$GITHUB_ENV"
-        echo "OCI_CLI_TENANCY=$(echo "$CREDS"     | jq -r .tenancy)"     >> "$GITHUB_ENV"
-        echo "OCI_CLI_FINGERPRINT=$(echo "$CREDS" | jq -r .fingerprint)" >> "$GITHUB_ENV"
-        echo "OCI_CLI_REGION=$(echo "$CREDS"      | jq -r .region)"      >> "$GITHUB_ENV"
+        mkdir -p "$HOME/.oci"
+        chmod 700 "$HOME/.oci"
 
-        KEY_PEM=$(echo "$CREDS" | jq -r .key_content_b64 | base64 -d)
-        {
-          echo 'OCI_CLI_KEY_CONTENT<<PEM_EOF'
-          echo "$KEY_PEM"
-          echo 'PEM_EOF'
-        } >> "$GITHUB_ENV"
+        echo "$CREDS" | jq -r .key_content_b64 | base64 -d > "$HOME/.oci/oci_api_key.pem"
+        chmod 600 "$HOME/.oci/oci_api_key.pem"
 
-    - name: Configure OCI CLI
-      uses: oracle-actions/configure-oci-cli@v1.3.1
+        OCI_USER=$(echo        "$CREDS" | jq -r .user)
+        OCI_TENANCY=$(echo     "$CREDS" | jq -r .tenancy)
+        OCI_FINGERPRINT=$(echo "$CREDS" | jq -r .fingerprint)
+        OCI_REGION=$(echo      "$CREDS" | jq -r .region)
+
+        cat > "$HOME/.oci/config" <<EOF
+        [DEFAULT]
+        user=$OCI_USER
+        tenancy=$OCI_TENANCY
+        fingerprint=$OCI_FINGERPRINT
+        region=$OCI_REGION
+        key_file=$HOME/.oci/oci_api_key.pem
+        EOF
+        chmod 600 "$HOME/.oci/config"
+
+    - name: Install OCI CLI
+      shell: bash
+      run: pipx install oci-cli
 
     - name: Upload to buckets
       shell: bash
