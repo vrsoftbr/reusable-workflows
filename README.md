@@ -1,6 +1,19 @@
 # Reusable Workflows
 
-Repositório utilizado para criação de Workflows Actions reutilizáveis
+Repositório utilizado para criação de Workflows Actions reutilizáveis e composite actions compartilhadas pela organização.
+
+## Composite Actions
+
+Diferente das reusable workflows abaixo (consumidas a nível de **job** via `uses:` no `jobs:`), composite actions são consumidas a nível de **step** dentro de um job existente.
+
+### Bucket Publish JAR ([bucket-publish-jar](./bucket-publish-jar))
+Publica um JAR em um ou mais buckets de Object Storage, gravando a versão como metadado. Implementação atual: OCI Object Storage. Interface provider-agnostic, preparada para futuras migrações de provedor.
+
+Ver [bucket-publish-jar/README.md](./bucket-publish-jar/README.md) para detalhes de uso, inputs e formato do secret `BUCKET_PUBLISH_CREDENTIALS`.
+
+---
+
+## Reusable Workflows
 
 ## Check Commit (check-commit.yml)
 Utilizada para verificar a quantidade de commits que houveram na branch main, desde a última tag/release criada

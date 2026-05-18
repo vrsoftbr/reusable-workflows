@@ -1,0 +1,77 @@
+name: 'Bucket Publish JAR'
+description: 'Publica um JAR em buckets de Object Storage com metadado de versão (implementação atual: OCI).'
+
+inputs:
+  credentials:
+    description: 'JSON com credenciais do provedor. Ver README para o formato.'
+    required: true
+  file:
+    description: 'Caminho local do arquivo a publicar.'
+    required: true
+  object-name:
+    description: 'Nome do objeto no bucket.'
+    required: true
+  buckets:
+    description: 'Lista de buckets separada por espaço (ex: "vr_4_4 vr_releases").'
+    required: true
+  version:
+    description: 'Versão a ser gravada como metadado `versao`.'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup OCI config from credentials
+      shell: bash
+      env:
+        CREDS: ${{ inputs.credentials }}
+      run: |
+        set -euo pipefail
+
+        mkdir -p "$HOME/.oci"
+        chmod 700 "$HOME/.oci"
+
+        echo "$CREDS" | jq -r .key_content_b64 | base64 -d > "$HOME/.oci/oci_api_key.pem"
+        chmod 600 "$HOME/.oci/oci_api_key.pem"
+
+        OCI_USER=$(echo        "$CREDS" | jq -r .user)
+        OCI_TENANCY=$(echo     "$CREDS" | jq -r .tenancy)
+        OCI_FINGERPRINT=$(echo "$CREDS" | jq -r .fingerprint)
+        OCI_REGION=$(echo      "$CREDS" | jq -r .region)
+
+        cat > "$HOME/.oci/config" <<EOF
+        [DEFAULT]
+        user=$OCI_USER
+        tenancy=$OCI_TENANCY
+        fingerprint=$OCI_FINGERPRINT
+        region=$OCI_REGION
+        key_file=$HOME/.oci/oci_api_key.pem
+        EOF
+        chmod 600 "$HOME/.oci/config"
+
+    - name: Install OCI CLI
+      shell: bash
+      run: pipx install oci-cli
+
+    - name: Upload to buckets
+      shell: bash
+      env:
+        FILE: ${{ inputs.file }}
+        OBJECT_NAME: ${{ inputs.object-name }}
+        BUCKETS: ${{ inputs.buckets }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        NAMESPACE=$(oci os ns get --query data --raw-output)
+
+        for BUCKET in $BUCKETS; do
+          oci os object put \
+            --namespace-name "$NAMESPACE" \
+            --bucket-name    "$BUCKET" \
+            --name           "$OBJECT_NAME" \
+            --file           "$FILE" \
+            --metadata       "{\"versao\":\"$VERSION\"}" \
+            --force
+          echo "✓ $OBJECT_NAME v$VERSION → $BUCKET"
+        done
