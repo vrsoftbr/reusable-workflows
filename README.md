@@ -124,4 +124,52 @@ jobs:
 ...
 ```
 
+## Claude PR Review (claude-review.yml)
+Executa code review automático em PRs usando o Claude (via plano OAuth, sem API key). Carrega contexto do ticket no Jira via MCP e aplica uma política em camadas mantida em outro repositório ([VRCodeReviewPolicy](https://github.com/vrsoftbr/VRCodeReviewPolicy)).
+
+Política aplicada (concatenada e passada ao Claude como prompt do review), na ordem:
+  1. **default** — `instructions/default.md` no repo de policy, sempre aplicada;
+  2. **stack** — `instructions/stacks/<stack>.md`, opcional, escolhida via input `stack`;
+  3. **projeto** — `instructions/projects/<project>.md`, opcional, escolhida via input `project`.
+
+Camadas mais específicas têm precedência. Como toda policy vive no repo central, alterar regras de qualquer projeto não exige tocar no repo do projeto.
+
+### Inputs:
+
+- `jira_url` URL base do Jira (ex.: `https://vrsoft.atlassian.net`) **[obrigatório]**
+- `stack` nome da camada de stack (resolve para `instructions/stacks/<stack>.md`). Vazio = só default
+- `project` ID do projeto (resolve para `instructions/projects/<project>.md`). Vazio = sem camada de projeto
+- `policy_ref` ref do repo de policy (tag/branch/sha). Default: `main`. Recomenda-se fixar em tag (`v1`)
+- `policy_repo` `owner/repo` do repositório de policy. Default: `vrsoftbr/VRCodeReviewPolicy`
+
+### Secrets:
+
+- `CLAUDE_CODE_OAUTH_TOKEN` token OAuth gerado por `claude setup-token` localmente **[obrigatório]**
+- `JIRA_USERNAME` e-mail da conta Atlassian **[obrigatório]**
+- `JIRA_API_TOKEN` API token criado em `id.atlassian.com/manage-profile/security/api-tokens` **[obrigatório]**
+- `POLICY_REPO_TOKEN` PAT/App token com acesso read ao repo de policy. **Opcional** — necessário apenas se o repo de policy for privado e o `GITHUB_TOKEN` padrão não tiver acesso
+
+### Exemplo
+```
+name: Code review (Claude)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    uses: vrsoftbr/reusable-workflows/.github/workflows/claude-review.yml@main
+    with:
+      jira_url: https://vrsoft.atlassian.net
+      stack: java
+      project: vrpdv
+      policy_ref: v1
+    secrets: inherit
+```
+
 

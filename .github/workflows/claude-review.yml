@@ -1,0 +1,223 @@
+name: Claude PR Review (reusable)
+
+# Reusable workflow centralizada — vive em vrsoftbr/reusable-workflows.
+# A POLÍTICA de review fica em outro repo (default: vrsoftbr/VRCodeReviewPolicy).
+# Cada projeto chama este workflow via `uses:` (veja exemplo no README.md).
+#
+# Política aplicada é composta em três camadas (na ordem), TODAS vivendo no repo de policy:
+#   1. default   — sempre aplicada (instructions/default.md)
+#   2. stack     — opcional, via input `stack` (instructions/stacks/<stack>.md)
+#   3. projeto   — opcional, via input `project` (instructions/projects/<project>.md)
+#
+# Camadas mais específicas têm precedência. Tudo é concatenado e passado ao Claude
+# como `.claude/review-policy.md`. Mudar a política não exige tocar em projeto algum —
+# basta alterar o repo de policy.
+#
+# Secrets necessários (idealmente a nível de organização):
+#   CLAUDE_CODE_OAUTH_TOKEN  -> gerado rodando `claude setup-token` localmente
+#   JIRA_USERNAME            -> e-mail da conta Atlassian
+#   JIRA_API_TOKEN           -> token criado em id.atlassian.com/manage-profile/security/api-tokens
+#   POLICY_REPO_TOKEN        -> OPCIONAL. Só necessário se o repo de policy for PRIVADO e
+#                               estiver em outro org/visibilidade do que o projeto que chama.
+#                               PAT fine-grained ou token de GitHub App com acesso read ao repo de policy.
+#                               Se omitido, o checkout usa o GITHUB_TOKEN padrão (funciona para repo público
+#                               ou se o repo de policy estiver no mesmo escopo com acesso liberado em Actions settings).
+
+on:
+  workflow_call:
+    inputs:
+      jira_url:
+        description: "URL base do Jira (ex: https://vrsoft.atlassian.net)"
+        required: true
+        type: string
+      stack:
+        description: "Nome da camada de stack a aplicar (ex: java, node-ts). Procura instructions/stacks/<stack>.md no repo de policy. Vazio = só default."
+        required: false
+        type: string
+        default: ""
+      project:
+        description: "ID do projeto. Resolve para instructions/projects/<project>.md no repo de policy. Vazio = sem camada de projeto."
+        required: false
+        type: string
+        default: ""
+      policy_ref:
+        description: "Ref do repo de policy (tag/branch/sha) — fixe em tag pra controlar mudanças"
+        required: false
+        type: string
+        default: main
+      policy_repo:
+        description: "owner/repo do repositório de policy"
+        required: false
+        type: string
+        default: vrsoftbr/VRCodeReviewPolicy
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: true
+      JIRA_USERNAME:
+        required: true
+      JIRA_API_TOKEN:
+        required: true
+      POLICY_REPO_TOKEN:
+        required: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout PR (repo do projeto)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout repo de policy
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.policy_repo }}
+          ref: ${{ inputs.policy_ref }}
+          path: .claude-review-policy
+          # Usa POLICY_REPO_TOKEN se fornecido (necessário pra repo privado em outro escopo);
+          # cai pro GITHUB_TOKEN padrão se não. Expressão || requer Actions runner recente — OK em ubuntu-latest.
+          token: ${{ secrets.POLICY_REPO_TOKEN || github.token }}
+
+      - name: Compor política de review (default + stack + projeto)
+        id: compose
+        shell: bash
+        env:
+          STACK: ${{ inputs.stack }}
+          PROJECT: ${{ inputs.project }}
+        run: |
+          set -euo pipefail
+          mkdir -p .claude
+          OUT=.claude/review-policy.md
+
+          DEFAULT_FILE=.claude-review-policy/instructions/default.md
+          if [ ! -f "$DEFAULT_FILE" ]; then
+            echo "::error::Política padrão não encontrada em $DEFAULT_FILE — repo de policy correto? (${{ inputs.policy_repo }}@${{ inputs.policy_ref }})"
+            exit 1
+          fi
+
+          {
+            echo "# Política composta de code review"
+            echo ""
+            echo "Esta política foi composta em camadas. Camadas mais específicas (declaradas mais abaixo)"
+            echo "têm precedência sobre as mais gerais quando houver conflito explícito."
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Camada 1 — Política padrão"
+            echo ""
+            cat "$DEFAULT_FILE"
+          } > "$OUT"
+
+          APPLIED="default"
+
+          if [ -n "$STACK" ]; then
+            STACK_FILE=".claude-review-policy/instructions/stacks/${STACK}.md"
+            if [ -f "$STACK_FILE" ]; then
+              {
+                echo ""
+                echo "---"
+                echo ""
+                echo "## Camada 2 — Stack: ${STACK}"
+                echo ""
+                cat "$STACK_FILE"
+              } >> "$OUT"
+              APPLIED="${APPLIED}, stack:${STACK}"
+            else
+              echo "::warning::Stack '${STACK}' declarada mas $STACK_FILE não existe — ignorada."
+            fi
+          fi
+
+          if [ -n "$PROJECT" ]; then
+            PROJECT_FILE=".claude-review-policy/instructions/projects/${PROJECT}.md"
+            if [ -f "$PROJECT_FILE" ]; then
+              {
+                echo ""
+                echo "---"
+                echo ""
+                echo "## Camada 3 — Projeto: ${PROJECT} (precedência máxima)"
+                echo ""
+                cat "$PROJECT_FILE"
+              } >> "$OUT"
+              APPLIED="${APPLIED}, projeto:${PROJECT}"
+            else
+              echo "::warning::Projeto '${PROJECT}' declarado mas $PROJECT_FILE não existe — ignorado."
+            fi
+          fi
+
+          echo "applied=${APPLIED}" >> "$GITHUB_OUTPUT"
+          echo "## Camadas aplicadas: ${APPLIED}"
+          echo "----- início da política composta -----"
+          cat "$OUT"
+          echo "----- fim da política composta -----"
+
+      - name: Extrair chave Jira do PR
+        id: jira
+        shell: bash
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          KEY=$(printf '%s %s' "$TITLE" "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -n1 || true)
+          if [ -n "$KEY" ]; then
+            echo "Chave detectada: $KEY"
+            echo "key=$KEY" >> "$GITHUB_OUTPUT"
+            echo "has_ticket=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nenhuma chave Jira encontrada em título/branch"
+            echo "key=" >> "$GITHUB_OUTPUT"
+            echo "has_ticket=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pré-pull da imagem do MCP do Atlassian
+        run: docker pull ghcr.io/sooperset/mcp-atlassian:latest
+
+      - name: Executar review com Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          mcp_config: |
+            {
+              "mcpServers": {
+                "atlassian": {
+                  "command": "docker",
+                  "args": [
+                    "run", "-i", "--rm",
+                    "-e", "JIRA_URL",
+                    "-e", "JIRA_USERNAME",
+                    "-e", "JIRA_API_TOKEN",
+                    "-e", "READ_ONLY_MODE=true",
+                    "-e", "ENABLED_TOOLS=jira_get_issue,jira_search,jira_get_issue_comments,jira_get_project_issues",
+                    "ghcr.io/sooperset/mcp-atlassian:latest"
+                  ],
+                  "env": {
+                    "JIRA_URL": "${{ inputs.jira_url }}",
+                    "JIRA_USERNAME": "${{ secrets.JIRA_USERNAME }}",
+                    "JIRA_API_TOKEN": "${{ secrets.JIRA_API_TOKEN }}"
+                  }
+                }
+              }
+            }
+          allowed_tools: "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob"
+          prompt: |
+            Você é o revisor automático deste pull request.
+
+            ## Instruções obrigatórias
+            Leia e siga RIGOROSAMENTE o arquivo `.claude/review-policy.md`.
+            Esse arquivo é uma política em camadas (default + stack + projeto, quando aplicáveis).
+            Camadas mais específicas têm precedência sobre as mais gerais quando houver conflito.
+
+            Camadas aplicadas neste review: ${{ steps.compose.outputs.applied }}.
+
+            ## Contexto do ticket
+            ${{ steps.jira.outputs.has_ticket == 'true'
+                && format('Ticket Jira: **{0}**. ANTES de revisar, chame `mcp__atlassian__jira_get_issue` com esta chave para entender o que foi pedido. Compare a entrega com o requisito do ticket na seção "Aderência ao ticket".', steps.jira.outputs.key)
+                || 'Não foi detectada chave Jira no título nem na branch do PR. Pule a seção "Aderência ao ticket" e mencione explicitamente no resumo que não há ticket associado.' }}
+
+            ## Saída
+            Publique exatamente UM comentário consolidado no PR seguindo o formato definido na política.
+            Não abra reviews de linha individuais.
