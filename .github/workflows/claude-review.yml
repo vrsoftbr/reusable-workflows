@@ -84,94 +84,32 @@ jobs:
           # cai pro GITHUB_TOKEN padrão se não. Expressão || requer Actions runner recente — OK em ubuntu-latest.
           token: ${{ secrets.POLICY_REPO_TOKEN || github.token }}
 
+      - name: Checkout scripts auxiliares (mesmo commit deste workflow)
+        uses: actions/checkout@v4
+        with:
+          repository: vrsoftbr/reusable-workflows
+          ref: ${{ github.workflow_sha }}
+          path: .reusable-workflows
+
       - name: Compor política de review (default + stack + projeto)
         id: compose
         shell: bash
         env:
+          POLICY_DIR: .claude-review-policy
+          OUT_FILE: .claude/review-policy.md
           STACK: ${{ inputs.stack }}
           PROJECT: ${{ inputs.project }}
-        run: |
-          set -euo pipefail
-          mkdir -p .claude
-          OUT=.claude/review-policy.md
-
-          DEFAULT_FILE=.claude-review-policy/instructions/default.md
-          if [ ! -f "$DEFAULT_FILE" ]; then
-            echo "::error::Política padrão não encontrada em $DEFAULT_FILE — repo de policy correto? (${{ inputs.policy_repo }}@${{ inputs.policy_ref }})"
-            exit 1
-          fi
-
-          {
-            echo "# Política composta de code review"
-            echo ""
-            echo "Esta política foi composta em camadas. Camadas mais específicas (declaradas mais abaixo)"
-            echo "têm precedência sobre as mais gerais quando houver conflito explícito."
-            echo ""
-            echo "---"
-            echo ""
-            echo "## Camada 1 — Política padrão"
-            echo ""
-            cat "$DEFAULT_FILE"
-          } > "$OUT"
-
-          APPLIED="default"
-
-          if [ -n "$STACK" ]; then
-            STACK_FILE=".claude-review-policy/instructions/stacks/${STACK}.md"
-            if [ -f "$STACK_FILE" ]; then
-              {
-                echo ""
-                echo "---"
-                echo ""
-                echo "## Camada 2 — Stack: ${STACK}"
-                echo ""
-                cat "$STACK_FILE"
-              } >> "$OUT"
-              APPLIED="${APPLIED}, stack:${STACK}"
-            else
-              echo "::warning::Stack '${STACK}' declarada mas $STACK_FILE não existe — ignorada."
-            fi
-          fi
-
-          if [ -n "$PROJECT" ]; then
-            PROJECT_FILE=".claude-review-policy/instructions/projects/${PROJECT}.md"
-            if [ -f "$PROJECT_FILE" ]; then
-              {
-                echo ""
-                echo "---"
-                echo ""
-                echo "## Camada 3 — Projeto: ${PROJECT} (precedência máxima)"
-                echo ""
-                cat "$PROJECT_FILE"
-              } >> "$OUT"
-              APPLIED="${APPLIED}, projeto:${PROJECT}"
-            else
-              echo "::warning::Projeto '${PROJECT}' declarado mas $PROJECT_FILE não existe — ignorado."
-            fi
-          fi
-
-          echo "applied=${APPLIED}" >> "$GITHUB_OUTPUT"
-          echo "## Camadas aplicadas: ${APPLIED}"
-          echo "----- início da política composta -----"
-          cat "$OUT"
-          echo "----- fim da política composta -----"
+          POLICY_REPO: ${{ inputs.policy_repo }}
+          POLICY_REF: ${{ inputs.policy_ref }}
+        run: bash .reusable-workflows/.github/workflows/claude-review/compose-policy.sh
 
       - name: Extrair chave Jira do PR
         id: jira
         shell: bash
-        run: |
-          TITLE="${{ github.event.pull_request.title }}"
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          KEY=$(printf '%s %s' "$TITLE" "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -n1 || true)
-          if [ -n "$KEY" ]; then
-            echo "Chave detectada: $KEY"
-            echo "key=$KEY" >> "$GITHUB_OUTPUT"
-            echo "has_ticket=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Nenhuma chave Jira encontrada em título/branch"
-            echo "key=" >> "$GITHUB_OUTPUT"
-            echo "has_ticket=false" >> "$GITHUB_OUTPUT"
-          fi
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: bash .reusable-workflows/.github/workflows/claude-review/extract-jira-key.sh
 
       - name: Pré-pull da imagem do MCP do Atlassian
         run: docker pull ghcr.io/sooperset/mcp-atlassian:latest
