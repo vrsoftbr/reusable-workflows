@@ -214,9 +214,17 @@ jobs:
             Camadas aplicadas neste review: ${{ steps.compose.outputs.applied }}.
 
             ## Contexto do ticket
-            ${{ steps.jira.outputs.has_ticket == 'true'
-                && format('Ticket Jira: **{0}**. ANTES de revisar, chame `mcp__atlassian__jira_get_issue` com esta chave para entender o que foi pedido. Compare a entrega com o requisito do ticket na seção "Aderência ao ticket".', steps.jira.outputs.key)
-                || 'Não foi detectada chave Jira no título nem na branch do PR. Pule a seção "Aderência ao ticket" e mencione explicitamente no resumo que não há ticket associado.' }}
+
+            ${{ steps.jira.outputs.has_ticket == 'true' && format('Chave Jira detectada no título/branch: **{0}**.', steps.jira.outputs.key) || 'Nenhuma chave Jira detectada no título nem na branch deste PR.' }}
+
+            ### Como buscar contexto do ticket
+
+            - **Se houver chave Jira detectada acima** — ANTES de qualquer análise do diff:
+              1. Chame `mcp__atlassian__jira_get_issue` com a chave detectada.
+              2. Inspecione o resultado. Se o ticket for sub-task (campo `issuetype.subtask == true` OU campo `parent` preenchido), chame `mcp__atlassian__jira_get_issue` também na chave do parent — o escopo de negócio costuma viver lá. NÃO suba mais de um nível (sub-task → parent é suficiente; não persiga story → epic).
+              3. Use o conteúdo combinado (sub-task + parent quando aplicável) como base da seção "Aderência ao ticket" do comentário final. Cite qual ticket forneceu o escopo principal.
+
+            - **Se NÃO houver chave Jira detectada** — pule a seção "Aderência ao ticket" no comentário final e mencione explicitamente no Resumo que não há ticket associado a este PR.
 
             ## Saída
             Publique exatamente UM comentário consolidado no PR seguindo o formato definido na política.
