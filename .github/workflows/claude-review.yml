@@ -189,3 +189,46 @@ jobs:
             ## Saída
             Publique exatamente UM comentário consolidado no PR seguindo o formato definido na política.
             Não abra reviews de linha individuais.
+
+      - name: Verificar se review foi publicado
+        # Roda sempre — inclusive se step anterior "passou" silenciosamente.
+        # Detecta o caso "Claude skipou por workflow validation" e dá feedback visual
+        # claro no PR + check vermelho, em vez de tudo verde com warning escondido no log.
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # Pequena pausa pra garantir que comment, se houver, já propagou.
+          sleep 10
+
+          # Conta comments dos últimos 5 min vindos de bots (Claude / GitHub Actions / Apps).
+          HAS_BOT_COMMENT=$(gh pr view "$PR" --repo "$REPO" --json comments \
+            --jq '[.comments[]
+                    | select(.author.login | test("claude|github-actions|bot|app/"; "i"))
+                    | select((.createdAt | fromdateiso8601) > (now - 300))
+                  ] | length')
+
+          if [ "${HAS_BOT_COMMENT:-0}" -ge 1 ]; then
+            echo "Review foi publicado (encontrou $HAS_BOT_COMMENT comment(s) recente(s) de bot)."
+            exit 0
+          fi
+
+          echo "Nenhum comentário de bot detectado — Claude provavelmente skipou."
+
+          gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Claude PR Review não publicou comentário nesta execução.**
+
+          A action terminou sem deixar review no PR. Causas comuns:
+
+          1. **Workflow validation** — o arquivo \`.github/workflows/pr-review.yml\` ainda não está na default branch do repo (ou está com conteúdo diferente). A \`anthropics/claude-code-action\` exige isso por segurança. **Solução:** mergeie o caller workflow na default branch uma vez; PRs subsequentes disparam normalmente.
+          2. **Quota Pro/Max esgotada** — janela de 5h consumida. Aguardar próxima janela.
+          3. **Erro de configuração** — credencial inválida, MCP config malformado, ou outro problema. Verifique a saída de cada step.
+
+          Logs desta execução: $RUN_URL"
+
+          # Falha o step pra deixar visível no status check do PR.
+          exit 1
