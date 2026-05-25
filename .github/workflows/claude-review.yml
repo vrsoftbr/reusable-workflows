@@ -118,33 +118,50 @@ jobs:
       - name: Pré-pull da imagem do MCP do Atlassian
         run: docker pull ghcr.io/sooperset/mcp-atlassian:latest
 
+      - name: Preparar MCP config (Jira)
+        shell: bash
+        env:
+          JIRA_URL: ${{ inputs.jira_url }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p .claude
+          # Aqui-doc interpola env vars no JSON. Valores com aspa dupla quebrariam o JSON —
+          # admin do org é responsável por usar tokens/usernames sem chars especiais.
+          cat > .claude/mcp.json <<EOF
+          {
+            "mcpServers": {
+              "atlassian": {
+                "command": "docker",
+                "args": [
+                  "run", "-i", "--rm",
+                  "-e", "JIRA_URL",
+                  "-e", "JIRA_USERNAME",
+                  "-e", "JIRA_API_TOKEN",
+                  "-e", "READ_ONLY_MODE=true",
+                  "-e", "ENABLED_TOOLS=jira_get_issue,jira_search,jira_get_issue_comments,jira_get_project_issues",
+                  "ghcr.io/sooperset/mcp-atlassian:latest"
+                ],
+                "env": {
+                  "JIRA_URL": "$JIRA_URL",
+                  "JIRA_USERNAME": "$JIRA_USERNAME",
+                  "JIRA_API_TOKEN": "$JIRA_API_TOKEN"
+                }
+              }
+            }
+          }
+          EOF
+
       - name: Executar review com Claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          mcp_config: |
-            {
-              "mcpServers": {
-                "atlassian": {
-                  "command": "docker",
-                  "args": [
-                    "run", "-i", "--rm",
-                    "-e", "JIRA_URL",
-                    "-e", "JIRA_USERNAME",
-                    "-e", "JIRA_API_TOKEN",
-                    "-e", "READ_ONLY_MODE=true",
-                    "-e", "ENABLED_TOOLS=jira_get_issue,jira_search,jira_get_issue_comments,jira_get_project_issues",
-                    "ghcr.io/sooperset/mcp-atlassian:latest"
-                  ],
-                  "env": {
-                    "JIRA_URL": "${{ inputs.jira_url }}",
-                    "JIRA_USERNAME": "${{ secrets.JIRA_USERNAME }}",
-                    "JIRA_API_TOKEN": "${{ secrets.JIRA_API_TOKEN }}"
-                  }
-                }
-              }
-            }
-          allowed_tools: "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob"
+          # API da action @v1 não aceita mais `mcp_config` e `allowed_tools` como inputs.
+          # Em vez disso, passamos via `claude_args` (string repassada ao CLI subjacente).
+          claude_args: >-
+            --mcp-config .claude/mcp.json
+            --allowed-tools "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob"
           prompt: |
             Você é o revisor automático deste pull request.
 
