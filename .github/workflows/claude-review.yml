@@ -84,11 +84,25 @@ jobs:
           # cai pro GITHUB_TOKEN padrão se não. Expressão || requer Actions runner recente — OK em ubuntu-latest.
           token: ${{ secrets.POLICY_REPO_TOKEN || github.token }}
 
-      - name: Checkout scripts auxiliares (mesmo commit deste workflow)
+      - name: Resolver ref do reusable-workflows
+        id: wfref
+        # github.workflow_ref vem em "owner/repo/.github/workflows/file.yml@refs/heads/branch"
+        # (ou @refs/tags/vX). Strip da parte antes do @ pra ficar com a ref pura, que o
+        # actions/checkout aceita. Não usar github.workflow_sha — em reusable workflow chamado
+        # de outro repo via pull_request, ele retorna o merge commit sintético do PR, que
+        # não é fetchable como sha normal ("not our ref").
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF="${GITHUB_WORKFLOW_REF##*@}"
+          echo "Ref resolvida: $REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout scripts auxiliares (mesma ref deste workflow)
         uses: actions/checkout@v4
         with:
           repository: vrsoftbr/reusable-workflows
-          ref: ${{ github.workflow_sha }}
+          ref: ${{ steps.wfref.outputs.ref }}
           path: .reusable-workflows
 
       - name: Compor política de review (default + stack + projeto)
