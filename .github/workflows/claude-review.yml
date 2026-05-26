@@ -163,8 +163,9 @@ jobs:
           show_full_output: true
           # API da action @v1 não aceita mais `mcp_config` e `allowed_tools` como inputs.
           # Em vez disso, passamos via `claude_args` (string repassada ao CLI subjacente).
+          # DEBUG: --model claude-opus-4-7 removido temporariamente pra isolar se o
+          # crash do SDK é causado pelo override de modelo + OAuth. Reintroduzir depois.
           claude_args: >-
-            --model claude-opus-4-7
             --mcp-config .claude/mcp.json
             --allowed-tools "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob"
           prompt: |
