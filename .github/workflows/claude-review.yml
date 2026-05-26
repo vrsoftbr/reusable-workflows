@@ -157,6 +157,10 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # TEMPORÁRIO (debug): expõe a saída completa do SDK no log pra diagnosticar
+          # o "SDK execution error". REMOVER após identificar a causa — expõe output
+          # potencialmente sensível no log do CI.
+          show_full_output: true
           # API da action @v1 não aceita mais `mcp_config` e `allowed_tools` como inputs.
           # Em vez disso, passamos via `claude_args` (string repassada ao CLI subjacente).
           claude_args: >-
