@@ -1,0 +1,310 @@
+name: Claude PR Review (reusable)
+
+# Reusable workflow centralizada — vive em vrsoftbr/reusable-workflows.
+# A POLÍTICA de review fica em outro repo (default: vrsoftbr/VRCodeReviewPolicy).
+# Cada projeto chama este workflow via `uses:` (veja exemplo no README.md).
+#
+# Política aplicada é composta em três camadas (na ordem), TODAS vivendo no repo de policy:
+#   1. default   — sempre aplicada (instructions/default.md)
+#   2. stack     — opcional, via input `stack` (instructions/stacks/<stack>.md)
+#   3. projeto   — opcional, via input `project` (instructions/projects/<project>.md)
+#
+# Camadas mais específicas têm precedência. Tudo é concatenado e passado ao Claude
+# como `.claude/review-policy.md`. Mudar a política não exige tocar em projeto algum —
+# basta alterar o repo de policy.
+#
+# Secrets necessários (idealmente a nível de organização):
+#   CLAUDE_CODE_OAUTH_TOKEN  -> gerado rodando `claude setup-token` localmente
+#   JIRA_USERNAME            -> e-mail da conta Atlassian
+#   JIRA_API_TOKEN           -> token criado em id.atlassian.com/manage-profile/security/api-tokens
+#   POLICY_REPO_TOKEN        -> OPCIONAL. Só necessário se o repo de policy for PRIVADO e
+#                               estiver em outro org/visibilidade do que o projeto que chama.
+#                               PAT fine-grained ou token de GitHub App com acesso read ao repo de policy.
+#                               Se omitido, o checkout usa o GITHUB_TOKEN padrão (funciona para repo público
+#                               ou se o repo de policy estiver no mesmo escopo com acesso liberado em Actions settings).
+
+on:
+  workflow_call:
+    inputs:
+      jira_url:
+        description: "URL base do Jira (ex: https://vrsoft.atlassian.net)"
+        required: true
+        type: string
+      stack:
+        description: "Nome da camada de stack a aplicar (ex: java, node-ts). Procura instructions/stacks/<stack>.md no repo de policy. Vazio = só default."
+        required: false
+        type: string
+        default: ""
+      project:
+        description: "ID do projeto. Resolve para instructions/projects/<project>.md no repo de policy. Vazio = sem camada de projeto."
+        required: false
+        type: string
+        default: ""
+      policy_ref:
+        description: "Ref do repo de policy (tag/branch/sha) — fixe em tag pra controlar mudanças"
+        required: false
+        type: string
+        default: main
+      policy_repo:
+        description: "owner/repo do repositório de policy"
+        required: false
+        type: string
+        default: vrsoftbr/VRCodeReviewPolicy
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: true
+      JIRA_USERNAME:
+        required: true
+      JIRA_API_TOKEN:
+        required: true
+      POLICY_REPO_TOKEN:
+        required: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout PR (repo do projeto)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout repo de policy
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.policy_repo }}
+          ref: ${{ inputs.policy_ref }}
+          path: .claude-review-policy
+          # Usa POLICY_REPO_TOKEN se fornecido (necessário pra repo privado em outro escopo);
+          # cai pro GITHUB_TOKEN padrão se não. Expressão || requer Actions runner recente — OK em ubuntu-latest.
+          token: ${{ secrets.POLICY_REPO_TOKEN || github.token }}
+
+      - name: Checkout scripts auxiliares
+        uses: actions/checkout@v4
+        with:
+          repository: vrsoftbr/reusable-workflows
+          # TODO: trocar para `main` após esta PR (#3) ser mergeada.
+          # Mantemos hardcoded enquanto branch de teste — github.workflow_sha retorna
+          # merge commit sintético do PR (não fetchable), e workflow_ref exige parsing
+          # extra; pra fase de testes, hardcode é mais simples.
+          ref: feat/claude-pr-review
+          path: .reusable-workflows
+
+      - name: Compor política de review (default + stack + projeto)
+        id: compose
+        shell: bash
+        env:
+          POLICY_DIR: .claude-review-policy
+          OUT_FILE: .claude/review-policy.md
+          STACK: ${{ inputs.stack }}
+          PROJECT: ${{ inputs.project }}
+          POLICY_REPO: ${{ inputs.policy_repo }}
+          POLICY_REF: ${{ inputs.policy_ref }}
+        run: bash .reusable-workflows/.github/workflows/claude-review/compose-policy.sh
+
+      - name: Extrair chave Jira do PR
+        id: jira
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: bash .reusable-workflows/.github/workflows/claude-review/extract-jira-key.sh
+
+      - name: Pré-pull da imagem do MCP do Atlassian
+        run: docker pull ghcr.io/sooperset/mcp-atlassian:latest
+
+      - name: Preparar MCP config (Jira)
+        shell: bash
+        env:
+          JIRA_URL: ${{ inputs.jira_url }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p .claude
+          # Aqui-doc interpola env vars no JSON. Valores com aspa dupla quebrariam o JSON —
+          # admin do org é responsável por usar tokens/usernames sem chars especiais.
+          cat > .claude/mcp.json <<EOF
+          {
+            "mcpServers": {
+              "atlassian": {
+                "command": "docker",
+                "args": [
+                  "run", "-i", "--rm",
+                  "-e", "JIRA_URL",
+                  "-e", "JIRA_USERNAME",
+                  "-e", "JIRA_API_TOKEN",
+                  "-e", "READ_ONLY_MODE=true",
+                  "-e", "ENABLED_TOOLS=jira_get_issue,jira_search,jira_get_issue_comments,jira_get_project_issues",
+                  "ghcr.io/sooperset/mcp-atlassian:latest"
+                ],
+                "env": {
+                  "JIRA_URL": "$JIRA_URL",
+                  "JIRA_USERNAME": "$JIRA_USERNAME",
+                  "JIRA_API_TOKEN": "$JIRA_API_TOKEN"
+                }
+              }
+            }
+          }
+          EOF
+
+      # A action anthropics/claude-code-action@v1 tem bug aberto (#676, #872, #1316)
+      # que limpa o CLAUDE_CODE_OAUTH_TOKEN antes da execução do SDK, quebrando auth
+      # OAuth. O CLI `claude` lê o token do env sem esse bug. Por isso chamamos o CLI
+      # direto em vez de usar a action.
+
+      - name: Instalar Claude CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
+      - name: Montar prompt do review
+        shell: bash
+        env:
+          APPLIED: ${{ steps.compose.outputs.applied }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          TICKET_CONTEXT: "${{ steps.jira.outputs.has_ticket == 'true' && format('Chave Jira detectada no titulo/branch: {0}. Use o MCP do Jira para buscar o contexto deste ticket.', steps.jira.outputs.key) || 'Nenhuma chave Jira detectada no titulo nem na branch deste PR.' }}"
+        run: |
+          set -euo pipefail
+          mkdir -p .claude
+          # Heredoc sem aspas para interpolar as env vars. Prompt evita backticks de
+          # propósito (backtick em heredoc não-aspas viraria command substitution).
+          cat > .claude/prompt.txt <<EOF
+          Você é o revisor automático deste pull request.
+
+          ## Instruções obrigatórias
+          Leia e siga RIGOROSAMENTE o arquivo .claude/review-policy.md (já está no diretório atual).
+          É uma política em camadas (default + stack + projeto). Camadas mais específicas têm
+          precedência sobre as mais gerais quando houver conflito.
+
+          Camadas aplicadas neste review: ${APPLIED}.
+
+          ## O que revisar
+          As mudanças deste PR estão no diff entre origin/${BASE_REF} e HEAD.
+          Rode: git diff origin/${BASE_REF}...HEAD para ver as mudanças (a tool Bash(git diff:*) está liberada).
+          Para avaliar impacto, use Grep/Glob/Read para investigar callers e arquivos relacionados.
+
+          ## Contexto do ticket
+          ${TICKET_CONTEXT}
+
+          Se houver chave Jira acima, ANTES de analisar o diff:
+          1. Chame mcp__atlassian__jira_get_issue com a chave.
+          2. Se o ticket for sub-task (issuetype.subtask == true ou campo parent preenchido),
+             chame mcp__atlassian__jira_get_issue também no parent. NÃO suba mais de um nível.
+          3. Use o conteúdo combinado como base da seção "Aderência ao ticket".
+          Se NÃO houver chave, pule "Aderência ao ticket" e mencione no Resumo que não há ticket.
+
+          ## Saída (formato obrigatório — JSON)
+          Produza EXCLUSIVAMENTE um objeto JSON válido (sem cercas de código markdown, sem
+          texto antes ou depois). Estrutura exata:
+          {
+            "summary": "markdown com as seções: Resumo; Aderência ao ticket (omita se não houver ticket); Cobertura desta revisão; Veredito (use um de: pronto para merge / ajustes recomendados / bloqueado)",
+            "findings": [
+              {
+                "path": "caminho/relativo/do/arquivo/a/partir/da/raiz/do/repo",
+                "line": 123,
+                "severity": "ALTA",
+                "body": "markdown: o que está errado, por que é problema NESTE projeto, e a correção sugerida"
+              }
+            ]
+          }
+          Regras do JSON:
+          - "line" DEVE ser uma linha que aparece no diff deste PR (linha adicionada ou
+            modificada, lado novo). NUNCA cite linha fora do diff — a API do GitHub rejeita.
+          - "severity" é um de: "ALTA", "MEDIA", "BAIXA" (sem acento, pra evitar problema de encoding).
+          - As seções Bloqueios e Sugestões da política NÃO vão no summary — viram itens em "findings".
+          - Se não houver nenhum achado, "findings" deve ser [].
+          - O PRIMEIRO caractere da sua resposta deve ser { e o ÚLTIMO deve ser }.
+            NÃO escreva nada antes do { (nem "Vou produzir o review", nem análise, nem
+            raciocínio) e nada depois do }. Sem cercas de código, sem saudação.
+          EOF
+          echo "----- prompt montado -----"
+          cat .claude/prompt.txt
+
+      - name: Rodar review (Claude CLI direto)
+        id: review
+        shell: bash
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          claude -p "$(cat .claude/prompt.txt)" \
+            --model claude-opus-4-7 \
+            --mcp-config .claude/mcp.json \
+            --allowed-tools "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob" \
+            > .claude/review-raw.txt
+          if [ ! -s .claude/review-raw.txt ]; then
+            echo "::error::Review veio vazio — Claude não produziu saída."
+            exit 1
+          fi
+          echo "----- saída crua do Claude -----"
+          cat .claude/review-raw.txt
+          # Claude às vezes adiciona preâmbulo ("Vou produzir o review.") e/ou cercas ```.
+          # Extrai do primeiro '{' ao último '}' pra isolar o objeto JSON.
+          python3 -c "s=open('.claude/review-raw.txt',encoding='utf-8').read(); i=s.find('{'); j=s.rfind('}'); open('.claude/review.json','w',encoding='utf-8').write(s[i:j+1] if (i>=0 and j>i) else '')"
+          if jq empty .claude/review.json 2>/dev/null; then
+            echo "json_ok=true" >> "$GITHUB_OUTPUT"
+            echo "----- JSON válido -----"
+            jq '.' .claude/review.json
+          else
+            echo "json_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Saída não é JSON válido — será postada como comentário simples (fallback)."
+          fi
+
+      - name: Postar review no PR (resumo + inline)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          JSON_OK: ${{ steps.review.outputs.json_ok }}
+        run: |
+          set -euo pipefail
+
+          # Fallback 1: saída não-JSON → posta crua como comentário simples.
+          if [ "$JSON_OK" != "true" ]; then
+            gh pr comment "$PR" --repo "$REPO" --body-file .claude/review-raw.txt
+            exit 0
+          fi
+
+          # Monta o payload da PR Review API: body = summary, comments = findings inline.
+          # event=COMMENT sempre (bot não pode aprovar/bloquear PR; veredito vai no texto).
+          jq '{
+            body: .summary,
+            event: "COMMENT",
+            comments: [
+              .findings[]
+              | { path: .path, line: .line, side: "RIGHT",
+                  body: ("**[" + .severity + "]** " + .body) }
+            ]
+          }' .claude/review.json > .claude/review-payload.json
+
+          NFIND=$(jq '.findings | length' .claude/review.json)
+          echo "Achados: $NFIND"
+
+          # Tenta postar review com comentários inline.
+          if gh api "repos/$REPO/pulls/$PR/reviews" --method POST \
+               --input .claude/review-payload.json >/dev/null 2>.claude/api-err.txt; then
+            echo "Review postado com $NFIND comentário(s) inline + resumo."
+            exit 0
+          fi
+
+          # Fallback 2: API rejeitou (ex.: linha fora do diff) → consolida tudo num comentário.
+          echo "::warning::PR Review API rejeitou os inline. Detalhe:"
+          cat .claude/api-err.txt || true
+          {
+            jq -r '.summary' .claude/review.json
+            echo ""
+            echo "---"
+            echo "_Não foi possível postar inline (alguma linha fora do diff). Achados consolidados:_"
+            jq -r '.findings[] | "\n**[" + .severity + "]** `" + .path + ":" + (.line|tostring) + "`\n\n" + .body' .claude/review.json
+          } > .claude/review-fallback.md
+          gh pr comment "$PR" --repo "$REPO" --body-file .claude/review-fallback.md
+          echo "Postado como comentário consolidado (fallback)."
