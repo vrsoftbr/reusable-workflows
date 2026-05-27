@@ -201,10 +201,27 @@ jobs:
           3. Use o conteúdo combinado como base da seção "Aderência ao ticket".
           Se NÃO houver chave, pule "Aderência ao ticket" e mencione no Resumo que não há ticket.
 
-          ## Saída (IMPORTANTE)
-          Produza UM comentário consolidado em markdown, seguindo o formato definido na política.
-          Sua saída INTEIRA será postada como comentário no PR — não inclua preâmbulo, saudação,
-          nem qualquer texto fora do comentário de review.
+          ## Saída (formato obrigatório — JSON)
+          Produza EXCLUSIVAMENTE um objeto JSON válido (sem cercas de código markdown, sem
+          texto antes ou depois). Estrutura exata:
+          {
+            "summary": "markdown com as seções: Resumo; Aderência ao ticket (omita se não houver ticket); Cobertura desta revisão; Veredito (use um de: pronto para merge / ajustes recomendados / bloqueado)",
+            "findings": [
+              {
+                "path": "caminho/relativo/do/arquivo/a/partir/da/raiz/do/repo",
+                "line": 123,
+                "severity": "ALTA",
+                "body": "markdown: o que está errado, por que é problema NESTE projeto, e a correção sugerida"
+              }
+            ]
+          }
+          Regras do JSON:
+          - "line" DEVE ser uma linha que aparece no diff deste PR (linha adicionada ou
+            modificada, lado novo). NUNCA cite linha fora do diff — a API do GitHub rejeita.
+          - "severity" é um de: "ALTA", "MEDIA", "BAIXA" (sem acento, pra evitar problema de encoding).
+          - As seções Bloqueios e Sugestões da política NÃO vão no summary — viram itens em "findings".
+          - Se não houver nenhum achado, "findings" deve ser [].
+          - Sua saída inteira deve ser parseável por jq. Nada de preâmbulo, saudação ou cercas.
           EOF
           echo "----- prompt montado -----"
           cat .claude/prompt.txt
@@ -220,20 +237,71 @@ jobs:
             --model claude-opus-4-7 \
             --mcp-config .claude/mcp.json \
             --allowed-tools "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob" \
-            > .claude/review-output.md
-          if [ ! -s .claude/review-output.md ]; then
+            > .claude/review-raw.txt
+          if [ ! -s .claude/review-raw.txt ]; then
             echo "::error::Review veio vazio — Claude não produziu saída."
             exit 1
           fi
-          echo "----- review gerado -----"
-          cat .claude/review-output.md
+          echo "----- saída crua do Claude -----"
+          cat .claude/review-raw.txt
+          # Remove cercas ```json / ``` caso o Claude as tenha adicionado; o resto deve ser o JSON.
+          sed -e 's/^```json[[:space:]]*$//' -e 's/^```[[:space:]]*$//' .claude/review-raw.txt > .claude/review.json
+          if jq empty .claude/review.json 2>/dev/null; then
+            echo "json_ok=true" >> "$GITHUB_OUTPUT"
+            echo "----- JSON válido -----"
+            jq '.' .claude/review.json
+          else
+            echo "json_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Saída não é JSON válido — será postada como comentário simples (fallback)."
+          fi
 
-      - name: Postar review no PR
+      - name: Postar review no PR (resumo + inline)
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          JSON_OK: ${{ steps.review.outputs.json_ok }}
         run: |
           set -euo pipefail
-          gh pr comment "$PR" --repo "$REPO" --body-file .claude/review-output.md
+
+          # Fallback 1: saída não-JSON → posta crua como comentário simples.
+          if [ "$JSON_OK" != "true" ]; then
+            gh pr comment "$PR" --repo "$REPO" --body-file .claude/review-raw.txt
+            exit 0
+          fi
+
+          # Monta o payload da PR Review API: body = summary, comments = findings inline.
+          # event=COMMENT sempre (bot não pode aprovar/bloquear PR; veredito vai no texto).
+          jq '{
+            body: .summary,
+            event: "COMMENT",
+            comments: [
+              .findings[]
+              | { path: .path, line: .line, side: "RIGHT",
+                  body: ("**[" + .severity + "]** " + .body) }
+            ]
+          }' .claude/review.json > .claude/review-payload.json
+
+          NFIND=$(jq '.findings | length' .claude/review.json)
+          echo "Achados: $NFIND"
+
+          # Tenta postar review com comentários inline.
+          if gh api "repos/$REPO/pulls/$PR/reviews" --method POST \
+               --input .claude/review-payload.json >/dev/null 2>.claude/api-err.txt; then
+            echo "Review postado com $NFIND comentário(s) inline + resumo."
+            exit 0
+          fi
+
+          # Fallback 2: API rejeitou (ex.: linha fora do diff) → consolida tudo num comentário.
+          echo "::warning::PR Review API rejeitou os inline. Detalhe:"
+          cat .claude/api-err.txt || true
+          {
+            jq -r '.summary' .claude/review.json
+            echo ""
+            echo "---"
+            echo "_Não foi possível postar inline (alguma linha fora do diff). Achados consolidados:_"
+            jq -r '.findings[] | "\n**[" + .severity + "]** `" + .path + ":" + (.line|tostring) + "`\n\n" + .body' .claude/review.json
+          } > .claude/review-fallback.md
+          gh pr comment "$PR" --repo "$REPO" --body-file .claude/review-fallback.md
+          echo "Postado como comentário consolidado (fallback)."
