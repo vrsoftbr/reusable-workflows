@@ -221,7 +221,9 @@ jobs:
           - "severity" é um de: "ALTA", "MEDIA", "BAIXA" (sem acento, pra evitar problema de encoding).
           - As seções Bloqueios e Sugestões da política NÃO vão no summary — viram itens em "findings".
           - Se não houver nenhum achado, "findings" deve ser [].
-          - Sua saída inteira deve ser parseável por jq. Nada de preâmbulo, saudação ou cercas.
+          - O PRIMEIRO caractere da sua resposta deve ser { e o ÚLTIMO deve ser }.
+            NÃO escreva nada antes do { (nem "Vou produzir o review", nem análise, nem
+            raciocínio) e nada depois do }. Sem cercas de código, sem saudação.
           EOF
           echo "----- prompt montado -----"
           cat .claude/prompt.txt
@@ -244,8 +246,9 @@ jobs:
           fi
           echo "----- saída crua do Claude -----"
           cat .claude/review-raw.txt
-          # Remove cercas ```json / ``` caso o Claude as tenha adicionado; o resto deve ser o JSON.
-          sed -e 's/^```json[[:space:]]*$//' -e 's/^```[[:space:]]*$//' .claude/review-raw.txt > .claude/review.json
+          # Claude às vezes adiciona preâmbulo ("Vou produzir o review.") e/ou cercas ```.
+          # Extrai do primeiro '{' ao último '}' pra isolar o objeto JSON.
+          python3 -c "s=open('.claude/review-raw.txt',encoding='utf-8').read(); i=s.find('{'); j=s.rfind('}'); open('.claude/review.json','w',encoding='utf-8').write(s[i:j+1] if (i>=0 and j>i) else '')"
           if jq empty .claude/review.json 2>/dev/null; then
             echo "json_ok=true" >> "$GITHUB_OUTPUT"
             echo "----- JSON válido -----"
