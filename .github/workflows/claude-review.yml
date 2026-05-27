@@ -153,87 +153,87 @@ jobs:
           }
           EOF
 
-      - name: Executar review com Claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # TEMPORÁRIO (debug): expõe a saída completa do SDK no log pra diagnosticar
-          # o "SDK execution error". REMOVER após identificar a causa — expõe output
-          # potencialmente sensível no log do CI.
-          show_full_output: true
-          # API da action @v1 não aceita mais `mcp_config` e `allowed_tools` como inputs.
-          # Em vez disso, passamos via `claude_args` (string repassada ao CLI subjacente).
-          # DEBUG: --model claude-opus-4-7 removido temporariamente pra isolar se o
-          # crash do SDK é causado pelo override de modelo + OAuth. Reintroduzir depois.
-          claude_args: >-
-            --mcp-config .claude/mcp.json
-            --allowed-tools "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob"
-          prompt: |
-            Você é o revisor automático deste pull request.
+      # A action anthropics/claude-code-action@v1 tem bug aberto (#676, #872, #1316)
+      # que limpa o CLAUDE_CODE_OAUTH_TOKEN antes da execução do SDK, quebrando auth
+      # OAuth. O CLI `claude` lê o token do env sem esse bug. Por isso chamamos o CLI
+      # direto em vez de usar a action.
 
-            ## Instruções obrigatórias
-            Leia e siga RIGOROSAMENTE o arquivo `.claude/review-policy.md`.
-            Esse arquivo é uma política em camadas (default + stack + projeto, quando aplicáveis).
-            Camadas mais específicas têm precedência sobre as mais gerais quando houver conflito.
+      - name: Instalar Claude CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g @anthropic-ai/claude-code
+          claude --version
 
-            Camadas aplicadas neste review: ${{ steps.compose.outputs.applied }}.
+      - name: Montar prompt do review
+        shell: bash
+        env:
+          APPLIED: ${{ steps.compose.outputs.applied }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          TICKET_CONTEXT: "${{ steps.jira.outputs.has_ticket == 'true' && format('Chave Jira detectada no titulo/branch: {0}. Use o MCP do Jira para buscar o contexto deste ticket.', steps.jira.outputs.key) || 'Nenhuma chave Jira detectada no titulo nem na branch deste PR.' }}"
+        run: |
+          set -euo pipefail
+          mkdir -p .claude
+          # Heredoc sem aspas para interpolar as env vars. Prompt evita backticks de
+          # propósito (backtick em heredoc não-aspas viraria command substitution).
+          cat > .claude/prompt.txt <<EOF
+          Você é o revisor automático deste pull request.
 
-            ## Contexto do ticket
+          ## Instruções obrigatórias
+          Leia e siga RIGOROSAMENTE o arquivo .claude/review-policy.md (já está no diretório atual).
+          É uma política em camadas (default + stack + projeto). Camadas mais específicas têm
+          precedência sobre as mais gerais quando houver conflito.
 
-            ${{ steps.jira.outputs.has_ticket == 'true' && format('Chave Jira detectada no título/branch: **{0}**.', steps.jira.outputs.key) || 'Nenhuma chave Jira detectada no título nem na branch deste PR.' }}
+          Camadas aplicadas neste review: ${APPLIED}.
 
-            ### Como buscar contexto do ticket
+          ## O que revisar
+          As mudanças deste PR estão no diff entre origin/${BASE_REF} e HEAD.
+          Rode: git diff origin/${BASE_REF}...HEAD para ver as mudanças (a tool Bash(git diff:*) está liberada).
+          Para avaliar impacto, use Grep/Glob/Read para investigar callers e arquivos relacionados.
 
-            - **Se houver chave Jira detectada acima** — ANTES de qualquer análise do diff:
-              1. Chame `mcp__atlassian__jira_get_issue` com a chave detectada.
-              2. Inspecione o resultado. Se o ticket for sub-task (campo `issuetype.subtask == true` OU campo `parent` preenchido), chame `mcp__atlassian__jira_get_issue` também na chave do parent — o escopo de negócio costuma viver lá. NÃO suba mais de um nível (sub-task → parent é suficiente; não persiga story → epic).
-              3. Use o conteúdo combinado (sub-task + parent quando aplicável) como base da seção "Aderência ao ticket" do comentário final. Cite qual ticket forneceu o escopo principal.
+          ## Contexto do ticket
+          ${TICKET_CONTEXT}
 
-            - **Se NÃO houver chave Jira detectada** — pule a seção "Aderência ao ticket" no comentário final e mencione explicitamente no Resumo que não há ticket associado a este PR.
+          Se houver chave Jira acima, ANTES de analisar o diff:
+          1. Chame mcp__atlassian__jira_get_issue com a chave.
+          2. Se o ticket for sub-task (issuetype.subtask == true ou campo parent preenchido),
+             chame mcp__atlassian__jira_get_issue também no parent. NÃO suba mais de um nível.
+          3. Use o conteúdo combinado como base da seção "Aderência ao ticket".
+          Se NÃO houver chave, pule "Aderência ao ticket" e mencione no Resumo que não há ticket.
 
-            ## Saída
-            Publique exatamente UM comentário consolidado no PR seguindo o formato definido na política.
-            Não abra reviews de linha individuais.
+          ## Saída (IMPORTANTE)
+          Produza UM comentário consolidado em markdown, seguindo o formato definido na política.
+          Sua saída INTEIRA será postada como comentário no PR — não inclua preâmbulo, saudação,
+          nem qualquer texto fora do comentário de review.
+          EOF
+          echo "----- prompt montado -----"
+          cat .claude/prompt.txt
 
-      - name: Verificar se review foi publicado
-        # Roda sempre — inclusive se step anterior "passou" silenciosamente.
-        # Detecta o caso "Claude skipou por workflow validation" e dá feedback visual
-        # claro no PR + check vermelho, em vez de tudo verde com warning escondido no log.
-        if: always()
+      - name: Rodar review (Claude CLI direto)
+        id: review
+        shell: bash
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          claude -p "$(cat .claude/prompt.txt)" \
+            --model claude-opus-4-7 \
+            --mcp-config .claude/mcp.json \
+            --allowed-tools "mcp__atlassian__jira_get_issue,mcp__atlassian__jira_search,mcp__atlassian__jira_get_issue_comments,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob" \
+            > .claude/review-output.md
+          if [ ! -s .claude/review-output.md ]; then
+            echo "::error::Review veio vazio — Claude não produziu saída."
+            exit 1
+          fi
+          echo "----- review gerado -----"
+          cat .claude/review-output.md
+
+      - name: Postar review no PR
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          # Pequena pausa pra garantir que comment, se houver, já propagou.
-          sleep 10
-
-          # Conta comments dos últimos 5 min vindos de bots (Claude / GitHub Actions / Apps).
-          HAS_BOT_COMMENT=$(gh pr view "$PR" --repo "$REPO" --json comments \
-            --jq '[.comments[]
-                    | select(.author.login | test("claude|github-actions|bot|app/"; "i"))
-                    | select((.createdAt | fromdateiso8601) > (now - 300))
-                  ] | length')
-
-          if [ "${HAS_BOT_COMMENT:-0}" -ge 1 ]; then
-            echo "Review foi publicado (encontrou $HAS_BOT_COMMENT comment(s) recente(s) de bot)."
-            exit 0
-          fi
-
-          echo "Nenhum comentário de bot detectado — Claude provavelmente skipou."
-
-          gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Claude PR Review não publicou comentário nesta execução.**
-
-          A action terminou sem deixar review no PR. Causas comuns:
-
-          1. **Workflow validation** — o arquivo \`.github/workflows/pr-review.yml\` ainda não está na default branch do repo (ou está com conteúdo diferente). A \`anthropics/claude-code-action\` exige isso por segurança. **Solução:** mergeie o caller workflow na default branch uma vez; PRs subsequentes disparam normalmente.
-          2. **Quota Pro/Max esgotada** — janela de 5h consumida. Aguardar próxima janela.
-          3. **Erro de configuração** — credencial inválida, MCP config malformado, ou outro problema. Verifique a saída de cada step.
-
-          Logs desta execução: $RUN_URL"
-
-          # Falha o step pra deixar visível no status check do PR.
-          exit 1
+          gh pr comment "$PR" --repo "$REPO" --body-file .claude/review-output.md
