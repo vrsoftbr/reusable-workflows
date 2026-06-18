@@ -20,7 +20,7 @@ Utilizada para verificar a quantidade de commits que houveram na branch main, de
 
 ### Secrets:
 
-- `VRPACKAGETOKEN` token de usuário do GitHub **[obrigatório]**
+- `GITHUB_TOKEN` token de usuário do GitHub **[obrigatório]**
 
 ### Outputs:
 
@@ -35,7 +35,7 @@ jobs:
     name: Check Commit
     uses: vrsoftbr/reusable-workflows/.github/workflows/check-commit.yml@main
     secrets:
-      VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }} 
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
 ...
 ```
 
@@ -120,7 +120,7 @@ jobs:
     with:
       versao: ${{needs.upgrade-version-and-build.outputs.versao}}
     secrets:
-      VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ...
 ```
 
@@ -134,7 +134,7 @@ Instala o VRClaudePlugin, auto-detecta o ecossistema do repositório (VRMaster/J
 
 ### Secrets:
 - `CLAUDE_CODE_OAUTH_TOKEN` — OAuth token do Claude Code **[obrigatório]**
-- `VRPACKAGETOKEN` — PAT com acesso à org (para clonar o VRClaudePlugin) **[obrigatório]**
+- `GITHUB_TOKEN` — PAT com acesso à org (para clonar o VRClaudePlugin) **[obrigatório]**
 
 ### Outputs:
 - `result` — `BLOCKED` | `WARNING` | `APPROVED` | `ERROR:<motivo>`
@@ -155,7 +155,7 @@ jobs:
     uses: vrsoftbr/reusable-workflows/.github/workflows/claude-review.yml@main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 Para repositórios VRSuper ou para modo advisory-only:
@@ -168,6 +168,6 @@ jobs:
       block_on_blocked: false  # roda sem bloquear o merge
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
