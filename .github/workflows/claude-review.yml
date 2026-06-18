@@ -1,5 +1,9 @@
 name: Claude CI Review
 
+permissions:
+  pull-requests: write
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -103,7 +107,7 @@ jobs:
         id: review
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPO: ${{ github.repository }}
         run: |
@@ -120,7 +124,7 @@ jobs:
           echo "Review result: $RESULT"
 
       - name: Block merge if BLOCKED
-        if: steps.capture.outputs.result == 'BLOCKED' && inputs.block_on_blocked == true
+        if: inputs.block_on_blocked && (steps.capture.outputs.result == 'BLOCKED' || steps.capture.outputs.result == 'ERROR:NO_RESULT_LINE')
         run: |
-          echo "::error::Review bloqueou o merge: achados Graves encontrados. Veja os comentários inline no PR."
+          echo "::error::Review bloqueou o merge: resultado '${{ steps.capture.outputs.result }}'. Veja os comentários inline no PR."
           exit 1
