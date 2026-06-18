@@ -21,7 +21,7 @@ on:
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN:
         required: true
-      GITHUB_TOKEN:
+      VRPACKAGETOKEN:
         required: true
     outputs:
       result:
@@ -55,7 +55,7 @@ jobs:
         with:
           repository: vrsoftbr/VRClaudePlugin
           ref: ${{ inputs.plugin_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.VRPACKAGETOKEN }}
           path: .vrclaudeplugin
 
       - name: Install Claude CLI
