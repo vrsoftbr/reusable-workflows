@@ -19,7 +19,7 @@ on:
         type: string
         default: main
     secrets:
-      ANTHROPIC_API_KEY:
+      CLAUDE_CODE_OAUTH_TOKEN:
         required: true
       VRPACKAGETOKEN:
         required: true
@@ -102,7 +102,7 @@ jobs:
       - name: Run Claude CI Review
         id: review
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPO: ${{ github.repository }}

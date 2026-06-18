@@ -133,7 +133,7 @@ Instala o VRClaudePlugin, auto-detecta o ecossistema do repositório (VRMaster/J
 - `plugin_ref` — opcional; ref do VRClaudePlugin a usar (padrão: `main`)
 
 ### Secrets:
-- `ANTHROPIC_API_KEY` — Claude API key **[obrigatório]**
+- `CLAUDE_CODE_OAUTH_TOKEN` — OAuth token do Claude Code **[obrigatório]**
 - `VRPACKAGETOKEN` — PAT com acesso à org (para clonar o VRClaudePlugin) **[obrigatório]**
 
 ### Outputs:
@@ -154,7 +154,7 @@ jobs:
   review:
     uses: vrsoftbr/reusable-workflows/.github/workflows/claude-review.yml@main
     secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }}
 ```
 
@@ -167,7 +167,7 @@ jobs:
       ecosystem: vrsuper       # força o ecossistema; omita para auto-detecção
       block_on_blocked: false  # roda sem bloquear o merge
     secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }}
 ```
 
