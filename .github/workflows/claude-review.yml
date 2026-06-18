@@ -111,7 +111,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPO: ${{ github.repository }}
         run: |
-          claude -p --dangerouslySkipPermissions --agent "${{ steps.detect.outputs.agent }}" \
+          claude -p --dangerously-skip-permissions --agent "${{ steps.detect.outputs.agent }}" \
             "Revisar o PR $PR_NUMBER no repositório $GITHUB_REPO" \
             | tee /tmp/review_output.txt
 
