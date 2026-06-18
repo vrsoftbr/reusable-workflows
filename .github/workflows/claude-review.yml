@@ -1,0 +1,122 @@
+name: Claude CI Review
+
+on:
+  workflow_call:
+    inputs:
+      ecosystem:
+        description: "Força 'vrmaster' (Java/Gradle) ou 'vrsuper' (Angular/NestJS). Omita para auto-detecção."
+        required: false
+        type: string
+        default: ""
+      block_on_blocked:
+        description: "Falha o CI com exit code 1 quando o resultado for BLOCKED. Defina false para modo advisory-only."
+        required: false
+        type: boolean
+        default: true
+      plugin_ref:
+        description: "Ref do VRClaudePlugin a usar (branch, tag ou SHA)."
+        required: false
+        type: string
+        default: main
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+    outputs:
+      result:
+        description: "Resultado do review: BLOCKED, WARNING, APPROVED ou ERROR:<motivo>"
+        value: ${{ jobs.review.outputs.result }}
+
+jobs:
+  review:
+    name: Claude CI Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      result: ${{ steps.capture.outputs.result }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Setup VRClaudePlugin agents and MCP config
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git clone --depth 1 --branch "${{ inputs.plugin_ref }}" \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/vrsoftbr/VRClaudePlugin.git" \
+            /tmp/VRClaudePlugin
+
+          mkdir -p ~/.claude/agents
+          cp /tmp/VRClaudePlugin/agents/*.md ~/.claude/agents/
+
+          cat > ~/.claude/settings.json << 'EOF'
+          {
+            "mcpServers": {
+              "github": {
+                "type": "http",
+                "url": "https://api.githubcopilot.com/mcp",
+                "headers": {
+                  "Authorization": "Bearer ${GITHUB_TOKEN}"
+                }
+              }
+            }
+          }
+          EOF
+
+      - name: Detect ecosystem
+        id: detect
+        env:
+          INPUT_ECOSYSTEM: ${{ inputs.ecosystem }}
+        run: |
+          if [ -n "$INPUT_ECOSYSTEM" ]; then
+            AGENT="${INPUT_ECOSYSTEM}-ci-review"
+          elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ] || \
+               [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
+            AGENT="vrmaster-ci-review"
+          elif [ -f "package.json" ] || [ -f "angular.json" ] || [ -f "nest-cli.json" ]; then
+            AGENT="vrsuper-ci-review"
+          else
+            echo "::error::Ecossistema não detectado. Adicione build.gradle ou package.json, ou defina o input 'ecosystem' explicitamente."
+            exit 1
+          fi
+          echo "agent=$AGENT" >> "$GITHUB_OUTPUT"
+          echo "Using agent: $AGENT"
+
+      - name: Run Claude CI Review
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          claude -p --agent "${{ steps.detect.outputs.agent }}" \
+            "Revisar o PR $PR_NUMBER no repositório $GITHUB_REPO" \
+            | tee /tmp/review_output.txt
+
+      - name: Capture result
+        id: capture
+        run: |
+          RESULT=$(grep '^REVIEW_RESULT=' /tmp/review_output.txt | tail -1 | cut -d= -f2-)
+          if [ -z "$RESULT" ]; then RESULT="ERROR:NO_RESULT_LINE"; fi
+          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
+          echo "Review result: $RESULT"
+
+      - name: Block merge if BLOCKED
+        if: steps.capture.outputs.result == 'BLOCKED' && inputs.block_on_blocked == true
+        run: |
+          echo "::error::Review bloqueou o merge: achados Graves encontrados. Veja os comentários inline no PR."
+          exit 1

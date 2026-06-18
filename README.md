@@ -124,4 +124,47 @@ jobs:
 ...
 ```
 
+## Claude CI Review (claude-review.yml)
+Instala o VRClaudePlugin, auto-detecta o ecossistema do repositório (VRMaster/Java ou VRSuper/Angular+NestJS) e executa o agente CI correspondente (`vrmaster-ci-review` ou `vrsuper-ci-review`). Publica comentários inline + resumo no PR via GitHub MCP e emite o output `result` para steps downstream.
+
+### Inputs:
+- `ecosystem` — opcional; força `vrmaster` ou `vrsuper` (padrão: auto-detectado a partir de `build.gradle` ou `package.json`)
+- `block_on_blocked` — opcional boolean; falha o CI se o resultado for BLOCKED (padrão: `true`)
+- `plugin_ref` — opcional; ref do VRClaudePlugin a usar (padrão: `main`)
+
+### Secrets:
+- `ANTHROPIC_API_KEY` — Claude API key **[obrigatório]**
+
+### Outputs:
+- `result` — `BLOCKED` | `WARNING` | `APPROVED` | `ERROR:<motivo>`
+
+### Permissões necessárias
+O job chamador (ou o repositório) precisa de `pull-requests: write` para que o agente publique o review. Configure via `permissions:` no workflow ou nas configurações do repositório em **Actions → General → Workflow permissions → Read and write**.
+
+### Exemplo
+```yaml
+name: Claude CI Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+jobs:
+  review:
+    uses: vrsoftbr/reusable-workflows/.github/workflows/claude-review.yml@main
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+Para repositórios VRSuper ou para modo advisory-only:
+```yaml
+jobs:
+  review:
+    uses: vrsoftbr/reusable-workflows/.github/workflows/claude-review.yml@main
+    with:
+      ecosystem: vrsuper       # força o ecossistema; omita para auto-detecção
+      block_on_blocked: false  # roda sem bloquear o merge
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
 
