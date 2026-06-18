@@ -21,6 +21,8 @@ on:
     secrets:
       ANTHROPIC_API_KEY:
         required: true
+      VRPACKAGETOKEN:
+        required: true
     outputs:
       result:
         description: "Resultado do review: BLOCKED, WARNING, APPROVED ou ERROR:<motivo>"
@@ -48,19 +50,21 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Checkout VRClaudePlugin
+        uses: actions/checkout@v4
+        with:
+          repository: vrsoftbr/VRClaudePlugin
+          ref: ${{ inputs.plugin_ref }}
+          token: ${{ secrets.VRPACKAGETOKEN }}
+          path: .vrclaudeplugin
+
       - name: Install Claude CLI
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Setup VRClaudePlugin agents and MCP config
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          git clone --depth 1 --branch "${{ inputs.plugin_ref }}" \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/vrsoftbr/VRClaudePlugin.git" \
-            /tmp/VRClaudePlugin
-
           mkdir -p ~/.claude/agents
-          cp /tmp/VRClaudePlugin/agents/*.md ~/.claude/agents/
+          cp .vrclaudeplugin/agents/*.md ~/.claude/agents/
 
           cat > ~/.claude/settings.json << 'EOF'
           {
