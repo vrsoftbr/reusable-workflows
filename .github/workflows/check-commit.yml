@@ -5,12 +5,17 @@ on:
     secrets:
       VRPACKAGETOKEN:
         required: true
+    inputs:
+      byPass:
+        description: 'Set a force return `true` to output `exist`, not affect in output `count`'
+        required: false
+        type: boolean
     outputs:
       count:
-        description: "The count of commits in main branch since last tag created"
+        description: 'Return he count of commits in main branch since last tag created'
         value: ${{ jobs.get-commit-count.outputs.count }}
       exist:
-        description: "Has commits in main branch since last tag created"
+        description: 'Return if has commits in main branch since last tag created'
         value: ${{ jobs.get-commit-count.outputs.exist }}
 
 jobs:
@@ -23,7 +28,7 @@ jobs:
       status: ${{ job.status }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.VRPACKAGETOKEN }}
           fetch-depth: 0
@@ -31,14 +36,15 @@ jobs:
           
       - name: Git Config
         run: git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com" && git config --global user.name "${GITHUB_ACTOR}" 
-      
+            
       - name: Commits Since Last Tag
         id: check_changes
         run: |
           FIRST_TAG=$([ -z "$(git tag)" ] && echo "true" || echo "false")
           COMMIT_COUNT=$([ "$FIRST_TAG" == true ] && echo "999" || echo "$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)")
-          COMMIT_EXIST=$([ "$COMMIT_COUNT" == 0 ] && echo "false" || echo "true")
+          COMMIT_EXIST=$([ ${{ toJSON(inputs.byPass) }} == true ] && echo "true" || ([ "$COMMIT_COUNT" == 0 ] && echo "false" || echo "true"))        
+          echo "ByPass: ${{ toJSON(inputs.byPass) }}"
           echo "Commits since last tag: $COMMIT_COUNT"
           echo "Has commits since last tag: $COMMIT_EXIST"
-          echo ::set-output name=commit_count::$COMMIT_COUNT
-          echo ::set-output name=commit_exist::$COMMIT_EXIST
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          echo "commit_exist=$COMMIT_EXIST" >> $GITHUB_OUTPUT
