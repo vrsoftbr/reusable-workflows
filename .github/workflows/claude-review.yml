@@ -109,6 +109,33 @@ jobs:
           echo "agent=$AGENT" >> "$GITHUB_OUTPUT"
           echo "Using agent: $AGENT"
 
+      - name: Checkout VRDoc
+        if: steps.detect.outputs.agent == 'java-ci-review'
+        uses: actions/checkout@v7
+        with:
+          repository: vrsoftbr/VRDoc
+          token: ${{ secrets.VRPACKAGETOKEN }}
+          path: .vrdoc
+          fetch-depth: 1
+
+      - name: Checkout VRWebDoc
+        if: steps.detect.outputs.agent != 'java-ci-review'
+        uses: actions/checkout@v7
+        with:
+          repository: vrsoftbr/VRWebDoc
+          token: ${{ secrets.VRPACKAGETOKEN }}
+          path: .vrwebdoc
+          fetch-depth: 1
+
+      - name: Move doc repo to agent cache path
+        run: |
+          mkdir -p ~/.cache
+          if [ "${{ steps.detect.outputs.agent }}" = "java-ci-review" ]; then
+            mv "$GITHUB_WORKSPACE/.vrdoc" ~/.cache/VRDoc
+          else
+            mv "$GITHUB_WORKSPACE/.vrwebdoc" ~/.cache/VRWebDoc
+          fi
+
       - name: Run Claude CI Review
         id: review
         env:
@@ -120,6 +147,8 @@ jobs:
           claude -p --dangerously-skip-permissions --agent "${{ steps.detect.outputs.agent }}" \
             "Revisar o PR $PR_NUMBER no repositório $GITHUB_REPO" \
             | tee /tmp/review_output.txt
+          echo "Review completed. Output:"
+          cat /tmp/review_output.txt
 
       - name: Capture result
         id: capture
