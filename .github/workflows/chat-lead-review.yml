@@ -3,6 +3,10 @@ name: Chat Lead Review (Super)
 
 on:
   workflow_call:
+    inputs:
+      urlChatWebHooks:
+        required: true
+        type: string
 
 jobs:
   send-message:
@@ -12,7 +16,7 @@ jobs:
     
     - name: Message to Google Chat
       run: |
-        curl --location --request POST '${{ vars.LEAD_REVIEW_CHAT_WEBHOOK_URL }}' \
+        curl --location --request POST '${{ inputs.urlChatWebHooks }}' \
         --header 'Content-Type: application/json' \
         --data-raw '{
             "cardsV2": [
