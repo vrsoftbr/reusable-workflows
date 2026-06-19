@@ -9,6 +9,15 @@ on:
       versao:
         required: true
         type: string
+      useCurrentBranch:
+        description: 'Use the calling branch instead of main for checkout and release commit'
+        required: false
+        type: boolean
+        default: false
+      summaryItems:
+        description: 'Items to display in step summary, one per line (markdown supported)'
+        required: false
+        type: string
     outputs:
       status:
         description: "The status of executin of workflow"
@@ -23,14 +32,16 @@ jobs:
       status: ${{ job.status }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v7
       with:
         token: ${{ secrets.VRPACKAGETOKEN }}
         fetch-depth: 0
-        ref: main
-    
-    - run: |
-        echo "versao:" ${{ inputs.versao }}
+        ref: ${{ inputs.useCurrentBranch && github.ref_name || 'main' }}
+
+    - name: Echos
+      run: |
+        echo "Versao:" ${{ inputs.versao }}
+        echo "useCurrentBranch:" ${{ inputs.useCurrentBranch }}
 
     - name: Generate Changelog Content
       run: |
@@ -157,6 +168,7 @@ jobs:
 
     - name: Git Commit and Push
       run: |
+        git pull
         git add .
         git commit -m "Generate CHANGELOG.md (${{ inputs.versao }})"
         git push
@@ -167,8 +179,18 @@ jobs:
         name: ${{ inputs.versao }}
         tag: v${{ inputs.versao }}
         body: "${{ env.NOTAS }}"
-        commit: main
+        commit: ${{ inputs.useCurrentBranch && github.ref_name || 'main' }}
         draft: false
         prerelease: false
         token: ${{ secrets.VRPACKAGETOKEN }}
+
+    - name: Set Summary
+      env:
+        SUMMARY_ITEMS: ${{ inputs.summaryItems }}
+      run: |
+        echo "### Versão: ${{ inputs.versao }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -n "$SUMMARY_ITEMS" ]; then
+          echo "$SUMMARY_ITEMS" >> $GITHUB_STEP_SUMMARY
+        fi
     
