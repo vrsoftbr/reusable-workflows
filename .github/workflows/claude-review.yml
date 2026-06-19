@@ -8,15 +8,15 @@ on:
   workflow_call:
     inputs:
       ecosystem:
-        description: "Força 'vrmaster' (Java/Gradle) ou 'vrsuper' (Angular/NestJS). Omita para auto-detecção."
+        description: "Força 'java', 'angular', 'nestjs' ou 'ts'. Omita para auto-detecção."
         required: false
         type: string
         default: ""
-      block_on_blocked:
-        description: "Falha o CI com exit code 1 quando o resultado for BLOCKED. Defina false para modo advisory-only."
+      advisory-only:
+        description: "Define true para rodar sem bloquear o merge (apenas informativo)."
         required: false
         type: boolean
-        default: true
+        default: false
       plugin_ref:
         description: "Ref do VRClaudePlugin a usar (branch, tag ou SHA)."
         required: false
@@ -93,11 +93,17 @@ jobs:
             AGENT="${INPUT_ECOSYSTEM}-ci-review"
           elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ] || \
                [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
-            AGENT="vrmaster-ci-review"
-          elif [ -f "package.json" ] || [ -f "angular.json" ] || [ -f "nest-cli.json" ]; then
-            AGENT="vrsuper-ci-review"
+            AGENT="java-ci-review"
+          elif [ -f "package.json" ]; then
+            if grep -q '"@angular/core"' package.json 2>/dev/null; then
+              AGENT="angular-ci-review"
+            elif grep -q '"@nestjs/core"' package.json 2>/dev/null; then
+              AGENT="nestjs-ci-review"
+            else
+              AGENT="ts-ci-review"
+            fi
           else
-            echo "::error::Ecossistema não detectado. Adicione build.gradle ou package.json, ou defina o input 'ecosystem' explicitamente."
+            echo "::error::Ecossistema não detectado. Adicione build.gradle/settings.gradle (Java) ou package.json (Angular/NestJS/TS), ou defina o input 'ecosystem' explicitamente (java | angular | nestjs | ts)."
             exit 1
           fi
           echo "agent=$AGENT" >> "$GITHUB_OUTPUT"
@@ -124,7 +130,7 @@ jobs:
           echo "Review result: $RESULT"
 
       - name: Block merge if BLOCKED
-        if: inputs.block_on_blocked && (steps.capture.outputs.result == 'BLOCKED' || steps.capture.outputs.result == 'ERROR:NO_RESULT_LINE')
+        if: "!inputs['advisory-only'] && (steps.capture.outputs.result == 'BLOCKED' || steps.capture.outputs.result == 'ERROR:NO_RESULT_LINE')"
         run: |
           echo "::error::Review bloqueou o merge: resultado '${{ steps.capture.outputs.result }}'. Veja os comentários inline no PR."
           exit 1

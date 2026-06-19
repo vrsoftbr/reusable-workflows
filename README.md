@@ -125,11 +125,20 @@ jobs:
 ```
 
 ## Claude CI Review (claude-review.yml)
-Instala o VRClaudePlugin, auto-detecta o ecossistema do repositório (VRMaster/Java ou VRSuper/Angular+NestJS) e executa o agente CI correspondente (`vrmaster-ci-review` ou `vrsuper-ci-review`). Publica comentários inline + resumo no PR via GitHub MCP e emite o output `result` para steps downstream.
+Instala o VRClaudePlugin, auto-detecta o ecossistema do repositório e executa o agente CI correspondente. Publica comentários inline + resumo no PR via GitHub MCP e emite o output `result` para steps downstream.
+
+### Auto-detecção de ecossistema
+
+| Condição detectada | Agente usado |
+|---|---|
+| `build.gradle` / `settings.gradle` (`.kts`) | `java-ci-review` |
+| `package.json` com `@angular/core` | `angular-ci-review` |
+| `package.json` com `@nestjs/core` | `nestjs-ci-review` |
+| `package.json` sem Angular/NestJS | `ts-ci-review` |
 
 ### Inputs:
-- `ecosystem` — opcional; força `vrmaster` ou `vrsuper` (padrão: auto-detectado a partir de `build.gradle` ou `package.json`)
-- `block_on_blocked` — opcional boolean; falha o CI se o resultado for BLOCKED (padrão: `true`)
+- `ecosystem` — opcional; força `java`, `angular`, `nestjs` ou `ts` (padrão: auto-detectado)
+- `advisory-only` — opcional boolean; quando `true`, roda sem bloquear o merge (padrão: `false`)
 - `plugin_ref` — opcional; ref do VRClaudePlugin a usar (padrão: `main`)
 
 ### Secrets:
@@ -158,14 +167,14 @@ jobs:
       VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }}
 ```
 
-Para repositórios VRSuper ou para modo advisory-only:
+Para forçar o ecossistema ou modo advisory-only:
 ```yaml
 jobs:
   review:
     uses: vrsoftbr/reusable-workflows/.github/workflows/claude-review.yml@main
     with:
-      ecosystem: vrsuper       # força o ecossistema; omita para auto-detecção
-      block_on_blocked: false  # roda sem bloquear o merge
+      ecosystem: angular       # java | angular | nestjs | ts
+      advisory-only: true      # roda sem bloquear o merge
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       VRPACKAGETOKEN: ${{ secrets.VRPACKAGETOKEN }}
