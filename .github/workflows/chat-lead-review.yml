@@ -1,0 +1,70 @@
+
+name: Chat Lead Review (Super)
+
+on:
+  workflow_call:
+
+jobs:
+  send-message:
+    name: Send Message
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Message to Google Chat
+      run: |
+        curl --location --request POST '${{ vars.LEAD_REVIEW_CHAT_WEBHOOK_URL }}' \
+        --header 'Content-Type: application/json' \
+        --data-raw '{
+            "cardsV2": [
+              {
+                "cardId": "unique-card-id",
+                "card": {
+                  "header": {
+                    "title": "Pull Request Aberto",
+                    "subtitle": "VR Software",
+                    "imageUrl": "https://storage.googleapis.com/imagem-aplicativos/bot/bot-github.png",
+                    "imageType": "CIRCLE",
+                    "imageAltText": "GitHub Actions - VR Software"
+                  },
+                  "sections": [
+                    {
+                      "header": "${{ github.event.repository.name }}",
+                      "collapsible": false,
+                      "widgets": [
+                        {
+                          "textParagraph": {
+                            "text": "
+                            <b>Título:</b> ${{ github.event.pull_request.title }}
+                            <b>Autor:</b> ${{ github.actor }}"
+                          }
+                        },
+                        {
+                          "buttonList": {
+                            "buttons": [
+                              {
+                                "text": "Pull Request",
+                                "type": "FILLED",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "${{ github.event.pull_request.html_url }}"
+                                  }
+                                }
+                              },
+                              {
+                                "text": "Repository",
+                                "onClick": {
+                                  "openLink": {
+                                    "url": "https://github.com/vrsoftbr/${{ github.event.repository.name }}"
+                                  }
+                                }
+                              }                                
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }'
