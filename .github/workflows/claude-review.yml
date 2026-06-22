@@ -147,19 +147,18 @@ jobs:
           claude -p --dangerously-skip-permissions --agent "${{ steps.detect.outputs.agent }}" \
             "Revisar o PR $PR_NUMBER no repositório $GITHUB_REPO" \
             | tee /tmp/review_output.txt
-          echo "Review completed. Output:"
+          RESULT=$(cat /tmp/review_output-summary.txt 2>/dev/null || echo "ERROR:NOT_CAPTURED")
+          echo "result=$RESULT" >> $GITHUB_OUTPUT
+          echo "################################"
+          echo "Review Summary:"
+          cat /tmp/review_output-summary.txt
+          echo "********************************"
+          echo "Review completed:"
           cat /tmp/review_output.txt
-
-      - name: Capture result
-        id: capture
-        run: |
-          RESULT=$(grep '^REVIEW_RESULT=' /tmp/review_output.txt | tail -1 | cut -d= -f2-)
-          if [ -z "$RESULT" ]; then RESULT="ERROR:NO_RESULT_LINE"; fi
-          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
-          echo "Review result: $RESULT"
+          echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
       - name: Block merge if BLOCKED
-        if: "!inputs['advisory-only'] && (steps.capture.outputs.result == 'BLOCKED' || steps.capture.outputs.result == 'ERROR:NO_RESULT_LINE')"
+        if: "!inputs['advisory-only'] && (steps.review.outputs.result == 'BLOCKED' || steps.review.outputs.result == 'ERROR:NOT_CAPTURED')"
         run: |
-          echo "::error::Review bloqueou o merge: resultado '${{ steps.capture.outputs.result }}'. Veja os comentários inline no PR."
+          echo "::error::Review bloqueou o merge: resultado '${{ steps.review.outputs.result }}'. Veja os comentários inline no PR."
           exit 1
