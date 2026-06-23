@@ -18,6 +18,11 @@ on:
         description: 'Items to display in step summary, one per line (markdown supported)'
         required: false
         type: string
+      prerelease:
+        description: 'Mark the release as a pre-release (non-production ready)'
+        required: false
+        type: boolean
+        default: false
     outputs:
       status:
         description: "The status of executin of workflow"
@@ -181,7 +186,7 @@ jobs:
         body: "${{ env.NOTAS }}"
         commit: ${{ inputs.useCurrentBranch && github.ref_name || 'main' }}
         draft: false
-        prerelease: false
+        prerelease: ${{ inputs.prerelease }}
         token: ${{ secrets.VRPACKAGETOKEN }}
 
     - name: Set Summary
